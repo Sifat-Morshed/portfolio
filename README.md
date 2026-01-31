@@ -24,9 +24,9 @@ Built with cutting-edge technologies for optimal performance:
 
 | Category | Technologies |
 |----------|---------------|
-| **Framework** | React 18 with TypeScript |
-| **Styling** | Tailwind CSS with custom animations |
-| **Animations** | GSAP ScrollTrigger, Lenis smooth scroll |
+| **Framework** | React 18, JavaScript, TypeScript |
+| **Styling** | Tailwind CSS, GSAP animations, Lenis |
+| **Animations** | GSAP ScrollTrigger with 60fps transitions |
 | **Build Tool** | Vite (3.26s production build) |
 | **Package Manager** | npm |
 
