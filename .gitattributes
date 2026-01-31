@@ -1,3 +1,4 @@
-* linguist-language=JavaScript
-*.tsx linguist-language=JavaScript
-*.ts linguist-language=JavaScript
+*.tsx linguist-language=TypeScript
+*.ts linguist-language=TypeScript
+*.json linguist-language=JSON
+tailwind.config.ts linguist-language=TypeScript
