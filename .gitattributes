@@ -1,4 +1,7 @@
-*.tsx linguist-language=TypeScript
-*.ts linguist-language=TypeScript
-*.json linguist-language=JSON
-tailwind.config.ts linguist-language=TypeScript
+*.tsx linguist-detectable=true
+*.ts linguist-detectable=true
+*.jsx linguist-detectable=true
+*.js linguist-detectable=true
+*.css linguist-detectable=true
+*.html linguist-detectable=true
+*.json linguist-detectable=true
