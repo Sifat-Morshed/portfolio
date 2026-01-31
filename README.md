@@ -1,81 +1,30 @@
-# Sifat Morshed — Sales Professional Portfolio
+# Sifat's Sales Portfolio
 
-A modern, performance‑optimized portfolio that showcases outbound sales expertise, appointment setting frameworks, KPI results, and a downloadable CV.
+Interactive sales tools, KPI tracking, and call simulators built with React & GSAP.
 
----
+**[Visit Live →](https://sifat-there.vercel.app/)**
 
-## Highlights
+## Features
 
-- **Sales Playbook** with real objection handling patterns
-- **Call Simulator** for live scenario prep
-- **KPI Storyboard** that highlights outcomes
-- **Career Timeline** with visual progression
-- **CV Download** generated on‑the‑fly
-
----
+- Sales Playbook with objection library
+- KPI performance dashboard
+- Call breakdown simulator
+- PDF CV download
+- Smooth animations with GSAP
 
 ## Tech Stack
 
-- **React 18** + **TypeScript**
-- **Vite** for fast builds
-- **Tailwind CSS** for styling
-- **GSAP** + **Lenis** for smooth animations
-- **jsPDF** for CV generation
+React, TypeScript, Tailwind CSS, GSAP, Vite, Lenis
 
----
-
-## Project Structure
-
-```
-Portfolio/
-├── components/          # Feature sections
-│   └── ui/              # Reusable UI pieces
-├── utils/               # Helpers (PDF generation)
-├── App.tsx              # Main app layout
-├── index.tsx            # Entry point
-└── vite.config.ts       # Build configuration
-```
-
----
-
-## Local Development
+## Setup
 
 ```bash
 npm install
 npm run dev
 ```
 
-### Production Build
+Build for production:
 
 ```bash
 npm run build
-npm run preview
 ```
-
----
-
-## Configuration
-
-No environment variables are required. The portfolio runs fully offline with local data.
-
----
-
-## Customization
-
-- **Hero text:** `components/Hero.tsx`
-- **Experience:** `components/Experience.tsx`
-- **Career timeline:** `components/CareerVision.tsx`
-- **Sales playbook:** `components/SalesPlaybook.tsx`
-- **CV data:** `utils/generatePDF.ts`
-
----
-
-## Contact
-
-- **Email:** sifatmorshed123@gmail.com
-- **WhatsApp:** https://wa.link/n3f4zo
-- **LinkedIn:** https://www.linkedin.com/in/sifat-morshed-b27b8633a
-
----
-
-Built for clarity, credibility, and conversion.
