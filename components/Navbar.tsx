@@ -47,7 +47,7 @@ const Navbar: React.FC = () => {
               </div>
             </div>
             <span className="text-xl font-display font-bold text-white tracking-tight">
-              Sifat Morshed<span className="text-primary">.dev</span>
+              Sifat Morshed<span className="text-primary"> | Sales & Dev</span>
             </span>
           </div>
 
