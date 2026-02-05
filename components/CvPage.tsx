@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Download, Mail, Phone, MapPin, Calendar, Globe } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { generateCV } from '../utils/generatePDF';
+import { generateCV } from '@/utils/generatePDF';
 
 const CvPage: React.FC = () => {
   return (

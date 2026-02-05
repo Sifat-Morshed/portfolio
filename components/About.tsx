@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Linkedin, Facebook, Instagram, Quote, Github, Code2 } from 'lucide-react';
+import { profileImage } from '@/constants/assets';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import SectionTitle from './ui/SectionTitle';
@@ -44,7 +45,7 @@ const About: React.FC = () => {
               {/* Image Frame - Natural Color + Premium Glow Effect */}
               <div className="w-full aspect-square rounded-2xl overflow-hidden border-2 border-cyan-500/30 relative z-10 transition-all duration-500 shadow-2xl shadow-cyan-500/30 group-hover:shadow-[0_0_60px_-10px_rgba(6,182,212,0.8)] group-hover:border-cyan-400/60">
                 <img 
-                  src="/sfat.jpg" 
+                  src={profileImage} 
                   alt="Sifat Morshed" 
                   className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
                   loading="eager"

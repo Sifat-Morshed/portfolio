@@ -1,23 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import ScrollToTopButton from './components/ui/ScrollToTopButton';
+import ScrollToTopButton from '../components/ui/ScrollToTopButton';
 import Lenis from 'lenis';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import About from './components/About';
-import Services from './components/Services';
-import ProofOfWork from './components/ProofOfWork';
-import AiWorkflow from './components/AiWorkflow'; // Now "Objectives"
-import Experience from './components/Experience';
-import CareerVision from './components/CareerVision';
-import Contact from './components/Contact';
-import Footer from './components/Footer';
-import KpiStoryboard from './components/KpiStoryboard';
-import SalesPlaybook from './components/SalesPlaybook';
-import CvPage from './components/CvPage';
-import { PrivacyPolicy, TermsOfService } from './components/Legal';
+import Navbar from '../components/Navbar';
+import Hero from '../components/Hero';
+import About from '../components/About';
+import Services from '../components/Services';
+import ProofOfWork from '../components/ProofOfWork';
+import AiWorkflow from '../components/AiWorkflow'; // Now "Objectives"
+import Experience from '../components/Experience';
+import CareerVision from '../components/CareerVision';
+import Contact from '../components/Contact';
+import Footer from '../components/Footer';
+import KpiStoryboard from '../components/KpiStoryboard';
+import SalesPlaybook from '../components/SalesPlaybook';
+import CvPage from '../components/CvPage';
+import { PrivacyPolicy, TermsOfService } from '../components/Legal';
 
 const HomePage = () => {
   return (
