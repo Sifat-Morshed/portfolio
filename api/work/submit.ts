@@ -2,8 +2,8 @@
 // Handles application submission with file uploads
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import * as sheets from '../../src/lib/work/google-sheets';
-import * as drive from '../../src/lib/work/google-drive';
+import * as sheets from '../_lib/google-sheets';
+import * as drive from '../_lib/google-drive';
 
 // Simple rate limiter (in-memory map)
 const rateLimitMap = new Map<string, number>();
