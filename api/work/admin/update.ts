@@ -2,6 +2,7 @@
 // Update application status
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import * as sheets from '../../../src/lib/work/google-sheets';
 
 function verifyAdmin(req: VercelRequest): boolean {
   const authHeader = req.headers.authorization;
@@ -59,7 +60,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
-    const sheets = await import('../../../src/lib/work/google-sheets');
     await sheets.updateApplicationStatus(app_id, status, notes);
 
     // Send status change email to the applicant (non-blocking)

@@ -2,6 +2,7 @@
 // Poll application status by App ID
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import * as sheets from '../../src/lib/work/google-sheets';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS on every response
@@ -28,7 +29,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Missing application ID' });
     }
 
-    const sheets = await import('../../src/lib/work/google-sheets');
     const app = await sheets.getApplicationById(id);
 
     if (!app) {

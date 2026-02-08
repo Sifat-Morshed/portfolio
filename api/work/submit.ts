@@ -2,15 +2,8 @@
 // Handles application submission with file uploads
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-// Dynamic imports for server-only modules
-async function getSheets() {
-  return import('../../src/lib/work/google-sheets');
-}
-
-async function getDrive() {
-  return import('../../src/lib/work/google-drive');
-}
+import * as sheets from '../../src/lib/work/google-sheets';
+import * as drive from '../../src/lib/work/google-drive';
 
 // Simple rate limiter (in-memory map)
 const rateLimitMap = new Map<string, number>();
@@ -134,7 +127,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { fields, files } = await parseMultipart(req);
 
     // Validate required fields
-    const requiredFields = ['company_id', 'role_id', 'role_title', 'full_name', 'email', 'phone', 'nationality'];
+    const requiredFields: string[] = ['company_id', 'role_id', 'role_title', 'full_name', 'email', 'phone', 'nationality'];
     for (const field of requiredFields) {
       if (!fields[field]) {
         return res.status(400).json({ error: `Missing required field: ${field}` });
@@ -169,7 +162,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'CV must be under 5MB' });
       }
 
-      const drive = await getDrive();
       const cvBuf = files.cv.buffer;
       cvLink = await drive.uploadFile(
         `cv_${sanitized.full_name.replace(/\s+/g, '_')}_${Date.now()}.pdf`,
@@ -188,7 +180,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Audio must be under 10MB' });
       }
 
-      const drive = await getDrive();
       const ext = files.audio.mimetype.split('/')[1] || 'webm';
       const audioBuf = files.audio.buffer;
       audioLink = await drive.uploadFile(
@@ -203,7 +194,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const now = new Date().toISOString();
 
     // Write to Google Sheets
-    const sheets = await getSheets();
     await sheets.appendApplication({
       app_id: appId,
       timestamp: now,

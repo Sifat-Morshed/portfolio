@@ -2,6 +2,7 @@
 // Fetch all applications for admin dashboard
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import * as sheets from '../../../src/lib/work/google-sheets';
 
 function verifyAdmin(req: VercelRequest): boolean {
   const authHeader = req.headers.authorization;
@@ -42,7 +43,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const sheets = await import('../../../src/lib/work/google-sheets');
     const applications = await sheets.getAllApplications();
 
     return res.status(200).json(applications);

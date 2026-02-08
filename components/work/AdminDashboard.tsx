@@ -309,11 +309,11 @@ const AdminDashboard: React.FC = () => {
           <Loader2 size={32} className="text-primary animate-spin" />
         </div>
       ) : error ? (
-        <div className="text-center py-20">
-          <p className="text-red-400 mb-4">{error}</p>
+        <div className="text-center py-12 px-4">
+          <p className="text-red-400 mb-4 text-sm break-words whitespace-pre-wrap">{error}</p>
           <button
             onClick={fetchApplications}
-            className="text-primary hover:text-primaryGlow transition-colors text-sm"
+            className="px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-lg text-sm hover:bg-primary/20 transition-colors"
           >
             Try again
           </button>
