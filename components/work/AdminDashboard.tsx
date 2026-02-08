@@ -131,18 +131,20 @@ const AdminDashboard: React.FC = () => {
       });
 
       if (res.status === 403) {
-        setError('Access denied');
+        setError('Access denied. Make sure ADMIN_EMAIL in Vercel matches your Google email exactly.');
         return;
       }
 
       if (!res.ok) {
-        throw new Error('Failed to fetch applications');
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Server error (${res.status})`);
       }
 
       const data = await res.json();
       setApplications(data);
-    } catch {
-      setError('Failed to load applications. Please try again.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Failed to load applications: ${msg}`);
     } finally {
       setIsLoading(false);
     }

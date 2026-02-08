@@ -25,10 +25,12 @@ const VALID_STATUSES = [
 
 function setCors(req: VercelRequest, res: VercelResponse) {
   const origin = req.headers.origin || '';
-  const allowed = process.env.ALLOWED_ORIGIN || 'https://sifat-there.vercel.app';
-  res.setHeader('Access-Control-Allow-Origin', origin === allowed ? origin : allowed);
+  const allowed = (process.env.ALLOWED_ORIGIN || 'https://sifat-there.vercel.app').replace(/\/$/, '');
+  const isAllowed = origin === allowed || origin.endsWith('.vercel.app');
+  res.setHeader('Access-Control-Allow-Origin', isAllowed ? origin : allowed);
   res.setHeader('Access-Control-Allow-Methods', 'PATCH, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

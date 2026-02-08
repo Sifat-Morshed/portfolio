@@ -17,10 +17,13 @@ function verifyAdmin(req: VercelRequest): boolean {
 
 function setCors(req: VercelRequest, res: VercelResponse) {
   const origin = req.headers.origin || '';
-  const allowed = process.env.ALLOWED_ORIGIN || 'https://sifat-there.vercel.app';
-  res.setHeader('Access-Control-Allow-Origin', origin === allowed ? origin : allowed);
+  const allowed = (process.env.ALLOWED_ORIGIN || 'https://sifat-there.vercel.app').replace(/\/$/, '');
+  // Allow exact match or any Vercel preview deploy for this project
+  const isAllowed = origin === allowed || origin.endsWith('.vercel.app');
+  res.setHeader('Access-Control-Allow-Origin', isAllowed ? origin : allowed);
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -35,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (!verifyAdmin(req)) {
-    return res.status(403).json({ error: 'Forbidden' });
+    return res.status(403).json({ error: 'Forbidden', hint: 'Check that ADMIN_EMAIL env var matches your Google account email exactly' });
   }
 
   try {
@@ -43,8 +46,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const applications = await sheets.getAllApplications();
 
     return res.status(200).json(applications);
-  } catch (error) {
-    console.error('Admin list error:', error);
-    return res.status(500).json({ error: 'Failed to fetch applications' });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Admin list error:', message, error);
+    return res.status(500).json({ error: 'Failed to fetch applications', detail: message });
   }
 }

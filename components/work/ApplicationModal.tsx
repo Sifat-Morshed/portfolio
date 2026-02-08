@@ -81,6 +81,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
     if (!email.trim()) { setError('Please sign in with Google first'); return false; }
     if (!phone.trim()) { setError('Please enter your phone number'); return false; }
     if (!nationality) { setError('Please select your nationality'); return false; }
+    if (!cvFile) { setError('Please upload your CV (PDF)'); return false; }
 
     // Check Bosnia-only role
     if (role.bosnianOnly && nationality !== 'Bosnia and Herzegovina') {
@@ -304,7 +305,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
 
               {/* CV Upload */}
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Upload CV (PDF, optional)</label>
+                <label className="block text-sm font-medium text-white mb-2">Upload CV (PDF) *</label>
                 <label className="flex items-center gap-3 px-4 py-3 border border-dashed border-white/10 rounded-lg cursor-pointer hover:border-primary/40 transition-colors">
                   <Upload size={18} className="text-slate-500" />
                   <span className="text-sm text-slate-400">

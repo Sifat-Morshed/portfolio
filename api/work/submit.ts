@@ -109,10 +109,12 @@ async function parseMultipart(req: VercelRequest): Promise<{
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS on every response
   const origin = req.headers.origin || '';
-  const allowed = process.env.ALLOWED_ORIGIN || 'https://sifat-there.vercel.app';
-  res.setHeader('Access-Control-Allow-Origin', origin === allowed ? origin : allowed);
+  const allowed = (process.env.ALLOWED_ORIGIN || 'https://sifat-there.vercel.app').replace(/\/$/, '');
+  const isAllowed = origin === allowed || origin.endsWith('.vercel.app');
+  res.setHeader('Access-Control-Allow-Origin', isAllowed ? origin : allowed);
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -300,8 +302,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(200).json({ app_id: appId });
-  } catch (error) {
-    console.error('Submission error:', error);
-    return res.status(500).json({ error: 'Submission failed. Please try again.' });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Submission error:', message, error);
+    return res.status(500).json({ error: `Submission failed: ${message}` });
   }
 }

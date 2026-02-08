@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useRef, useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, Activity, ChevronDown, LogOut, Mail, Briefcase } from 'lucide-react';
+import { ArrowLeft, Phone, Activity, ChevronDown, LogOut, Mail } from 'lucide-react';
 import gsap from 'gsap';
 import { AuthProvider, useAuth } from '../../src/lib/work/AuthContext';
 import WorkErrorBoundary from './WorkErrorBoundary';
@@ -59,36 +59,29 @@ const WorkLayoutInner: React.FC = () => {
         <div className="container mx-auto px-4 md:px-6 py-3.5 flex items-center justify-between">
           {/* Left: back + logo */}
           <div className="flex items-center gap-4">
-            <Link
-              to="/"
+            {/* Back button — goes back one page in history, NOT home */}
+            <button
+              onClick={() => navigate(-1)}
               className="work-nav-elem flex items-center gap-2 text-sm text-slate-500 hover:text-white transition-colors"
             >
               <ArrowLeft size={16} />
-              <span className="hidden sm:inline">Portfolio</span>
-            </Link>
+              <span className="hidden sm:inline">Back</span>
+            </button>
             <div className="work-nav-elem w-px h-5 bg-border" />
-            <Link to="/work" className="work-nav-elem flex items-center gap-2.5">
+            {/* Logo — goes to portfolio home */}
+            <Link to="/" className="work-nav-elem flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-indigo-500/20 border border-primary/20 flex items-center justify-center">
                 <Phone size={14} className="text-primary" />
               </div>
               <span className="text-base font-display font-bold text-white hidden sm:inline">
-                Work With Me
+                Portfolio
               </span>
             </Link>
           </div>
 
           {/* Right: actions */}
           <div className="work-nav-elem flex items-center gap-2 sm:gap-3">
-            {/* Mobile-only: Get Hired to Dial standalone button */}
-            <Link
-              to="/work"
-              className="md:hidden flex items-center gap-1.5 text-xs font-bold text-background bg-primary px-3 py-1.5 rounded-lg shadow-[0_0_12px_-3px_rgba(6,182,212,0.4)] transition-all"
-            >
-              <Briefcase size={12} />
-              Get Hired to Dial
-            </Link>
-
-            {/* Check Status — always highlighted */}
+            {/* Check Status — always highlighted, full text on all sizes */}
             <Link
               to="/work/status"
               className={`flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-lg transition-all ${
@@ -98,7 +91,7 @@ const WorkLayoutInner: React.FC = () => {
               }`}
             >
               <Activity size={14} />
-              <span className="hidden sm:inline">Check Status</span>
+              Check Status
             </Link>
 
             {/* Welcome dropdown or nothing if not logged in */}
