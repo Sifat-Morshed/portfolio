@@ -8,18 +8,8 @@ function verifyAdmin(req: VercelRequest): boolean {
   if (!authHeader) return false;
 
   try {
-    // Expects: "Bearer <email>"
     const email = authHeader.replace('Bearer ', '').trim();
-    if (email !== process.env.ADMIN_EMAIL) return false;
-
-    // If ADMIN_API_SECRET is set, also verify the x-admin-secret header
-    const secret = process.env.ADMIN_API_SECRET;
-    if (secret) {
-      const provided = req.headers['x-admin-secret'] as string;
-      if (provided !== secret) return false;
-    }
-
-    return true;
+    return email === process.env.ADMIN_EMAIL;
   } catch {
     return false;
   }
