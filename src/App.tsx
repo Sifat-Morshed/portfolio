@@ -58,11 +58,21 @@ const ScrollToTop = () => {
 
 gsap.registerPlugin(ScrollTrigger);
 
-function App() {
+/** Hook: only enables Lenis smooth-scroll on portfolio pages, NOT /work/* */
+const useLenis = () => {
+  const { pathname } = useLocation();
+  const isWorkRoute = pathname.startsWith('/work');
+
   useEffect(() => {
+    if (isWorkRoute) {
+      // Remove Lenis classes so overflow:hidden doesn't lock the page
+      document.documentElement.classList.remove('lenis', 'lenis-smooth', 'lenis-stopped');
+      return;
+    }
+
     const lenis = new Lenis({
       duration: 1.0,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: 'vertical',
       gestureOrientation: 'vertical',
       smoothWheel: true,
@@ -74,18 +84,25 @@ function App() {
     lenis.on('scroll', ScrollTrigger.update);
     ScrollTrigger.refresh();
 
+    let rafId: number;
     function raf(time: number) {
       lenis.raf(time);
-      requestAnimationFrame(raf);
+      rafId = requestAnimationFrame(raf);
     }
-
-    requestAnimationFrame(raf);
+    rafId = requestAnimationFrame(raf);
 
     return () => {
+      cancelAnimationFrame(rafId);
       lenis.off('scroll', ScrollTrigger.update);
       lenis.destroy();
+      document.documentElement.classList.remove('lenis', 'lenis-smooth', 'lenis-stopped');
     };
-  }, []);
+  }, [isWorkRoute]);
+};
+
+/** Inner app that has access to Router context */
+const AppRoutes = () => {
+  useLenis();
 
   // Scroll-to-top button state
   const [showScroll, setShowScroll] = useState(false);
@@ -102,7 +119,7 @@ function App() {
   };
 
   return (
-    <Router>
+    <>
       <ScrollToTop />
       <div className="min-h-screen bg-background selection:bg-primary/30 selection:text-white">
         <Routes>
@@ -122,6 +139,14 @@ function App() {
         </Routes>
         <ScrollToTopButton show={showScroll} onClick={handleScrollToTop} />
       </div>
+    </>
+  );
+};
+
+function App() {
+  return (
+    <Router>
+      <AppRoutes />
     </Router>
   );
 }
