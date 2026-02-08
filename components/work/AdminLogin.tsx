@@ -1,11 +1,11 @@
 import React, { useRef, useEffect, useLayoutEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../src/lib/work/AuthContext';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, LogOut } from 'lucide-react';
 import gsap from 'gsap';
 
 const AdminLogin: React.FC = () => {
-  const { user, isAdmin, renderGoogleButton, isGsiLoaded, devMode, devSignIn } = useAuth();
+  const { user, isAdmin, signOut, renderGoogleButton, isGsiLoaded, devMode, devSignIn } = useAuth();
   const googleBtnRef = useRef<HTMLDivElement>(null);
   const comp = useRef<HTMLDivElement>(null);
 
@@ -41,9 +41,15 @@ const AdminLogin: React.FC = () => {
           <ShieldCheck size={28} className="text-red-400" />
         </div>
         <h2 className="admin-elem text-xl font-display font-bold text-white mb-2">Access Denied</h2>
-        <p className="admin-elem text-slate-300">
+        <p className="admin-elem text-slate-300 mb-6">
           You are signed in as <span className="text-white">{user.email}</span>, but this account does not have admin access.
         </p>
+        <button
+          onClick={signOut}
+          className="admin-elem inline-flex items-center gap-2 px-6 py-2.5 bg-white text-background rounded-lg font-semibold text-sm hover:bg-white/90 transition-colors"
+        >
+          <LogOut size={14} /> Sign Out & Try Again
+        </button>
       </div>
     );
   }
