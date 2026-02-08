@@ -43,7 +43,7 @@ const CvPage: React.FC = () => {
              </div>
              <div className="flex items-center gap-3 text-slate-300 group">
                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-green-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform"><Mail size={16} /></div>
-               <span>sifat.morshed.dev@gmail.com</span>
+               <span>sifatmorshed123@gmail.com</span>
              </div>
              <div className="flex items-center gap-3 text-slate-300 group">
                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-400/30 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform"><MapPin size={16} /></div>

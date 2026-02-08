@@ -34,7 +34,7 @@ export const generateCV = () => {
   doc.setTextColor(200, 200, 200);
   doc.setFont('helvetica', 'normal');
   doc.text('📞 +880 1867001744', margin, yPos);
-  doc.text('✉️  sifat.morshed.dev@gmail.com', margin + 70, yPos);
+  doc.text('✉️  sifatmorshed123@gmail.com', margin + 70, yPos);
   yPos += 6;
   doc.text('📍 Dhaka-1219, Bangladesh', margin, yPos);
 
