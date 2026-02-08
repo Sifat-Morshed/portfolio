@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, Upload, Loader2, CheckCircle, AlertTriangle, ChevronRight, ChevronLeft } from 'lucide-react';
 import AudioUploader from './AudioUploader';
+import GoogleSignInButton from './GoogleSignInButton';
 import type { CompanyMeta, RoleMeta } from '../../src/lib/work/types';
 import { getCountryOptions } from '../../src/lib/work/countries';
 import { useAuth } from '../../src/lib/work/AuthContext';
@@ -12,8 +13,6 @@ interface ApplicationModalProps {
   role: RoleMeta;
   session: { user: { name: string; email: string } } | null;
   onSignIn: () => void;
-  renderGoogleButton: (container: HTMLElement | null) => void;
-  isGsiLoaded: boolean;
 }
 
 type Step = 'auth' | 'identity' | 'blacklist' | 'audio' | 'success';
@@ -27,8 +26,6 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
   role,
   session,
   onSignIn,
-  renderGoogleButton,
-  isGsiLoaded,
 }) => {
   const [step, setStep] = useState<Step>(session ? 'identity' : 'auth');
   const [fullName, setFullName] = useState(session?.user?.name || '');
@@ -43,15 +40,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
   const [appId, setAppId] = useState('');
   const [error, setError] = useState('');
 
-  const googleBtnRef = useRef<HTMLDivElement>(null);
-  const { devMode, devSignIn } = useAuth();
-
-  // Render Google button when auth step is visible
-  useEffect(() => {
-    if (step === 'auth' && isGsiLoaded && googleBtnRef.current) {
-      renderGoogleButton(googleBtnRef.current);
-    }
-  }, [step, isGsiLoaded, renderGoogleButton]);
+  const { devMode, devSignIn, isGsiLoaded } = useAuth();
 
   // If session arrives (user signed in), advance past auth
   useEffect(() => {
@@ -216,9 +205,9 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
           {step === 'auth' && (
             <div className="text-center py-8">
               <p className="text-slate-300 mb-6">Sign in with Google to start your application.</p>
-              {/* Google rendered button */}
+              {/* Custom Google Sign-In Button */}
               <div className="flex justify-center">
-                <div ref={googleBtnRef} />
+                <GoogleSignInButton label="Sign in with Google" />
               </div>
               {!isGsiLoaded && !devMode && (
                 <div className="mt-4">

@@ -23,13 +23,18 @@ const VALID_STATUSES = [
   'REJECTED',
 ];
 
+function setCors(req: VercelRequest, res: VercelResponse) {
+  const origin = req.headers.origin || '';
+  const allowed = process.env.ALLOWED_ORIGIN || 'https://sifat-there.vercel.app';
+  res.setHeader('Access-Control-Allow-Origin', origin === allowed ? origin : allowed);
+  res.setHeader('Access-Control-Allow-Methods', 'PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setCors(req, res);
+
   if (req.method === 'OPTIONS') {
-    const origin = req.headers.origin || '';
-    const allowed = process.env.ALLOWED_ORIGIN || 'https://sifat-there.vercel.app';
-    res.setHeader('Access-Control-Allow-Origin', origin === allowed ? origin : allowed);
-    res.setHeader('Access-Control-Allow-Methods', 'PATCH, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-secret');
     return res.status(200).end();
   }
 

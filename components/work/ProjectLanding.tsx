@@ -9,7 +9,7 @@ import { useAuth } from '../../src/lib/work/AuthContext';
 const ProjectLanding: React.FC = () => {
   const { companyId, roleId } = useParams<{ companyId: string; roleId: string }>();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { user, signIn, renderGoogleButton, isGsiLoaded } = useAuth();
+  const { user, signIn } = useAuth();
   const comp = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -168,8 +168,6 @@ const ProjectLanding: React.FC = () => {
         role={role}
         session={user ? { user } : null}
         onSignIn={signIn}
-        renderGoogleButton={renderGoogleButton}
-        isGsiLoaded={isGsiLoaded}
       />
     </div>
   );

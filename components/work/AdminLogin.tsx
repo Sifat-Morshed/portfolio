@@ -1,12 +1,12 @@
-import React, { useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useRef, useLayoutEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../src/lib/work/AuthContext';
 import { ShieldCheck, LogOut } from 'lucide-react';
 import gsap from 'gsap';
+import GoogleSignInButton from './GoogleSignInButton';
 
 const AdminLogin: React.FC = () => {
-  const { user, isAdmin, signOut, renderGoogleButton, isGsiLoaded, devMode, devSignIn } = useAuth();
-  const googleBtnRef = useRef<HTMLDivElement>(null);
+  const { user, isAdmin, signOut, devMode, devSignIn } = useAuth();
   const comp = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -21,12 +21,6 @@ const AdminLogin: React.FC = () => {
     }, comp);
     return () => ctx.revert();
   }, []);
-
-  useEffect(() => {
-    if (!user && isGsiLoaded && googleBtnRef.current) {
-      renderGoogleButton(googleBtnRef.current);
-    }
-  }, [user, isGsiLoaded, renderGoogleButton]);
 
   // If already logged in as admin, auto-redirect
   if (user && isAdmin) {
@@ -63,13 +57,10 @@ const AdminLogin: React.FC = () => {
       <p className="admin-elem text-slate-300 mb-8">
         Sign in with your authorized Google account to access the admin dashboard.
       </p>
-      {/* Google rendered button */}
+      {/* Custom Google Sign-In Button */}
       <div className="admin-elem flex justify-center">
-        <div ref={googleBtnRef} />
+        <GoogleSignInButton label="Sign in with Google" />
       </div>
-      {!isGsiLoaded && !devMode && (
-        <p className="text-xs text-slate-600 mt-4">Loading sign-in...</p>
-      )}
       {/* Dev Mode Buttons */}
       {devMode && (
         <div className="admin-elem mt-6 space-y-3">

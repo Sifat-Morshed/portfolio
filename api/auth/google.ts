@@ -4,12 +4,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Set CORS on every response
+  const origin = req.headers.origin || '';
+  const allowed = process.env.ALLOWED_ORIGIN || 'https://sifat-there.vercel.app';
+  res.setHeader('Access-Control-Allow-Origin', origin === allowed ? origin : allowed);
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
   if (req.method === 'OPTIONS') {
-    const origin = req.headers.origin || '';
-    const allowed = process.env.ALLOWED_ORIGIN || 'https://sifat-there.vercel.app';
-    res.setHeader('Access-Control-Allow-Origin', origin === allowed ? origin : allowed);
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     return res.status(200).end();
   }
 
