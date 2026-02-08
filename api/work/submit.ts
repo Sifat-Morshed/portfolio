@@ -3,7 +3,6 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import * as sheets from '../lib/google-sheets.js';
-import * as drive from '../lib/google-drive.js';
 
 // Simple rate limiter (in-memory map)
 const rateLimitMap = new Map<string, number>();
@@ -152,8 +151,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       blacklist_acknowledged: fields.blacklist_acknowledged === 'true' ? 'true' : 'false',
     };
 
-    // Validate CV file
+    // Validate CV file (stored in memory, emailed as attachment to admin)
     let cvLink = '';
+    let cvAttachment: { filename: string; content: Buffer; contentType: string } | null = null;
     if (files.cv) {
       if (files.cv.mimetype !== 'application/pdf') {
         return res.status(400).json({ error: 'CV must be a PDF file' });
@@ -161,17 +161,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (files.cv.buffer.length > 5 * 1024 * 1024) {
         return res.status(400).json({ error: 'CV must be under 5MB' });
       }
-
-      const cvBuf = files.cv.buffer;
-      cvLink = await drive.uploadFile(
-        `cv_${sanitized.full_name.replace(/\s+/g, '_')}_${Date.now()}.pdf`,
-        'application/pdf',
-        new Uint8Array(cvBuf).buffer as ArrayBuffer
-      );
+      const cvFilename = `cv_${sanitized.full_name.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+      cvAttachment = { filename: cvFilename, content: files.cv.buffer, contentType: 'application/pdf' };
+      cvLink = `[emailed to admin]`;
     }
 
-    // Validate audio file
+    // Validate audio file (stored in memory, emailed as attachment to admin)
     let audioLink = '';
+    let audioAttachment: { filename: string; content: Buffer; contentType: string } | null = null;
     if (files.audio) {
       if (!files.audio.mimetype.startsWith('audio/')) {
         return res.status(400).json({ error: 'Audio must be an audio file' });
@@ -179,14 +176,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (files.audio.buffer.length > 10 * 1024 * 1024) {
         return res.status(400).json({ error: 'Audio must be under 10MB' });
       }
-
       const ext = files.audio.mimetype.split('/')[1] || 'webm';
-      const audioBuf = files.audio.buffer;
-      audioLink = await drive.uploadFile(
-        `audio_${sanitized.full_name.replace(/\s+/g, '_')}_${Date.now()}.${ext}`,
-        files.audio.mimetype,
-        new Uint8Array(audioBuf).buffer as ArrayBuffer
-      );
+      const audioFilename = `audio_${sanitized.full_name.replace(/\s+/g, '_')}_${Date.now()}.${ext}`;
+      audioAttachment = { filename: audioFilename, content: files.audio.buffer, contentType: files.audio.mimetype };
+      audioLink = `[emailed to admin]`;
     }
 
     // Generate UUID
@@ -255,12 +248,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           `,
         });
 
-        // 2. Admin notification email (new application alert)
+        // 2. Admin notification email with file attachments
         if (adminNotifyEmail) {
+          const attachments: Array<{ filename: string; content: Buffer; contentType: string }> = [];
+          if (cvAttachment) attachments.push(cvAttachment);
+          if (audioAttachment) attachments.push(audioAttachment);
+
           await transporter.sendMail({
             from: `"Work With Me Bot" <${process.env.EMAIL_SERVER_USER}>`,
             to: adminNotifyEmail,
             subject: `🔔 New Application: ${sanitized.full_name} — ${sanitized.role_title}`,
+            attachments,
             html: `
               <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; background: #0A0A0B; color: #e2e8f0; border-radius: 12px; overflow: hidden;">
                 <div style="background: linear-gradient(135deg, #f59e0b, #ef4444); padding: 20px 32px;">
@@ -275,9 +273,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">Role</td><td style="color: #f59e0b; padding: 6px 0; font-weight: 600;">${sanitized.role_title}</td></tr>
                     <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">Reference</td><td style="color: #fff; padding: 6px 0;">${sanitized.reference || '—'}</td></tr>
                     <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">App ID</td><td style="font-family: monospace; color: #06b6d4; padding: 6px 0;">${appId}</td></tr>
-                    <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">Audio</td><td style="color: #fff; padding: 6px 0;">${audioLink ? '<a href="' + audioLink + '" style="color: #06b6d4;">Listen</a>' : 'None'}</td></tr>
-                    <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">CV</td><td style="color: #fff; padding: 6px 0;">${cvLink ? '<a href="' + cvLink + '" style="color: #06b6d4;">View</a>' : 'None'}</td></tr>
+                    <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">CV</td><td style="color: #fff; padding: 6px 0;">${cvAttachment ? '📎 Attached' : 'None'}</td></tr>
+                    <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">Audio</td><td style="color: #fff; padding: 6px 0;">${audioAttachment ? '📎 Attached' : 'None'}</td></tr>
                   </table>
+                  ${attachments.length > 0 ? '<p style="color: #22c55e; margin-top: 16px; font-size: 13px;">📎 Files are attached to this email.</p>' : ''}
                   <div style="margin-top: 20px;">
                     <a href="${siteUrl}/work/admin" style="display: inline-block; background: #06b6d4; color: #fff; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Open Admin Dashboard →</a>
                   </div>
