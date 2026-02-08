@@ -37,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // 2. Test _lib import
   try {
-    const sheets = await import('../_lib/google-sheets');
+    const sheets = await import('../lib/google-sheets');
     checks.importTest = `OK - google-sheets has exports: ${Object.keys(sheets).join(', ')}`;
   } catch (err: unknown) {
     checks.importTest = `FAIL: ${err instanceof Error ? err.message : String(err)}`;
