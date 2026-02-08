@@ -19,6 +19,9 @@ portfolio/
 .env.production
 .env.development
 
+# Internal docs / blueprints (not for public repo)
+docs/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -1,0 +1,226 @@
+// Google Sheets API v4 adapter for Work With Me module
+// Used as a relational data store ("Headless Spreadsheet" architecture)
+
+import type { ApplicationRow, ApplicationStatus } from './types';
+
+const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
+
+interface SheetsConfig {
+  serviceAccountEmail: string;
+  privateKey: string;
+  sheetId: string;
+}
+
+function getConfig(): SheetsConfig {
+  return {
+    serviceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '',
+    privateKey: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+    sheetId: process.env.GOOGLE_SHEET_ID || '',
+  };
+}
+
+// Create a JWT and exchange for access token
+async function getAccessToken(): Promise<string> {
+  const config = getConfig();
+  const now = Math.floor(Date.now() / 1000);
+
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const payload = {
+    iss: config.serviceAccountEmail,
+    scope: SCOPES.join(' '),
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600,
+  };
+
+  const encoder = new TextEncoder();
+  const headerB64 = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const payloadB64 = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const unsignedToken = `${headerB64}.${payloadB64}`;
+
+  // Import the private key for signing
+  const pemContents = config.privateKey
+    .replace('-----BEGIN PRIVATE KEY-----', '')
+    .replace('-----END PRIVATE KEY-----', '')
+    .replace(/\s/g, '');
+
+  const binaryDer = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryDer.buffer,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    cryptoKey,
+    encoder.encode(unsignedToken)
+  );
+
+  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+
+  const jwt = `${unsignedToken}.${signatureB64}`;
+
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt,
+    }),
+  });
+
+  const tokenData = await tokenRes.json();
+  if (!tokenData.access_token) {
+    throw new Error('Failed to get access token from Google');
+  }
+  return tokenData.access_token;
+}
+
+const COLUMNS: (keyof ApplicationRow)[] = [
+  'app_id', 'timestamp', 'status', 'company_id', 'role_id', 'role_title',
+  'full_name', 'email', 'phone', 'nationality', 'reference',
+  'blacklist_acknowledged', 'cv_link', 'audio_link', 'notes', 'last_updated',
+];
+
+// Append a new application row to the Applications sheet
+export async function appendApplication(row: ApplicationRow): Promise<void> {
+  const config = getConfig();
+  const token = await getAccessToken();
+  const values = COLUMNS.map((col) => row[col] || '');
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/Applications!A:P:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ values: [values] }),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to append row: ${error}`);
+  }
+}
+
+// Fetch all application rows
+export async function getAllApplications(): Promise<ApplicationRow[]> {
+  const config = getConfig();
+  const token = await getAccessToken();
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/Applications!A:P`;
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to fetch rows: ${error}`);
+  }
+
+  const data = await res.json();
+  const rows: string[][] = data.values || [];
+
+  // Skip header row if present
+  const dataRows = rows.length > 0 && rows[0][0] === 'app_id' ? rows.slice(1) : rows;
+
+  return dataRows.map((row) => {
+    const obj: Record<string, string> = {};
+    COLUMNS.forEach((col, i) => {
+      obj[col] = row[i] || '';
+    });
+    return obj as unknown as ApplicationRow;
+  });
+}
+
+// Find a single application by app_id
+export async function getApplicationById(appId: string): Promise<ApplicationRow | null> {
+  const all = await getAllApplications();
+  return all.find((r) => r.app_id === appId) || null;
+}
+
+// Update a specific field for an application (find row by app_id, update columns)
+export async function updateApplicationStatus(
+  appId: string,
+  status: ApplicationStatus,
+  notes?: string
+): Promise<void> {
+  const config = getConfig();
+  const token = await getAccessToken();
+
+  // First, find the row index
+  const allUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/Applications!A:A`;
+  const allRes = await fetch(allUrl, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const allData = await allRes.json();
+  const ids: string[][] = allData.values || [];
+
+  let rowIndex = -1;
+  for (let i = 0; i < ids.length; i++) {
+    if (ids[i][0] === appId) {
+      rowIndex = i + 1; // 1-indexed for Sheets
+      break;
+    }
+  }
+
+  if (rowIndex === -1) {
+    throw new Error(`Application ${appId} not found`);
+  }
+
+  // Update status (column C) and last_updated (column P)
+  const now = new Date().toISOString();
+  const updates: { range: string; values: string[][] }[] = [
+    { range: `Applications!C${rowIndex}`, values: [[status]] },
+    { range: `Applications!P${rowIndex}`, values: [[now]] },
+  ];
+
+  if (notes !== undefined) {
+    updates.push({ range: `Applications!O${rowIndex}`, values: [[notes]] });
+  }
+
+  const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values:batchUpdate`;
+  const batchRes = await fetch(batchUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      valueInputOption: 'USER_ENTERED',
+      data: updates,
+    }),
+  });
+
+  if (!batchRes.ok) {
+    const error = await batchRes.text();
+    throw new Error(`Failed to update row: ${error}`);
+  }
+}
+
+// Export all applications as CSV
+export async function exportApplicationsCSV(): Promise<string> {
+  const apps = await getAllApplications();
+  const header = COLUMNS.join(',');
+  const rows = apps.map((app) =>
+    COLUMNS.map((col) => {
+      const val = app[col] || '';
+      // Escape CSV values
+      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    }).join(',')
+  );
+  return [header, ...rows].join('\n');
+}

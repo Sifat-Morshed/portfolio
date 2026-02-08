@@ -19,6 +19,15 @@ import SalesPlaybook from '../components/SalesPlaybook';
 import CvPage from '../components/CvPage';
 import { PrivacyPolicy, TermsOfService } from '../components/Legal';
 
+// Work With Me module
+import WorkLayout from '../components/work/WorkLayout';
+import WorkListing from '../components/work/WorkListing';
+import ProjectLanding from '../components/work/ProjectLanding';
+import StatusPage from '../components/work/StatusPage';
+import AdminLogin from '../components/work/AdminLogin';
+import AdminDashboard from '../components/work/AdminDashboard';
+import WorkCTA from '../components/work/WorkCTA';
+
 const HomePage = () => {
   return (
     <>
@@ -32,6 +41,7 @@ const HomePage = () => {
       <Experience />
       <AiWorkflow />
       <CareerVision />
+      <WorkCTA />
       <Contact />
       <Footer />
     </>
@@ -100,6 +110,15 @@ function App() {
           <Route path="/cv" element={<CvPage />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
+
+          {/* Work With Me module */}
+          <Route path="/work" element={<WorkLayout />}>
+            <Route index element={<WorkListing />} />
+            <Route path="status" element={<StatusPage />} />
+            <Route path="admin/login" element={<AdminLogin />} />
+            <Route path="admin" element={<AdminDashboard />} />
+            <Route path=":companyId/:roleId" element={<ProjectLanding />} />
+          </Route>
         </Routes>
         <ScrollToTopButton show={showScroll} onClick={handleScrollToTop} />
       </div>

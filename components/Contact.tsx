@@ -6,7 +6,7 @@ const Contact: React.FC = () => {
   const email = "sifatmorshed123@gmail.com";
   const whatsappLink = "https://wa.link/n3f4zo";
 
-  // AI Feature States
+  // Contact form state
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
   const [generatedMessage, setGeneratedMessage] = useState('');

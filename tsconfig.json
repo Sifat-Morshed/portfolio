@@ -25,5 +25,13 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "include": [
+    "src",
+    "components",
+    "vite-env.d.ts"
+  ],
+  "exclude": [
+    "api"
+  ]
 }

@@ -1,0 +1,55 @@
+// Vercel Serverless Function: GET /api/work/admin/export
+// Export all applications as CSV
+
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+function verifyAdmin(req: VercelRequest): boolean {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return false;
+
+  try {
+    const email = authHeader.replace('Bearer ', '').trim();
+    if (email !== process.env.ADMIN_EMAIL) return false;
+
+    const secret = process.env.ADMIN_API_SECRET;
+    if (secret) {
+      const provided = req.headers['x-admin-secret'] as string;
+      if (provided !== secret) return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method === 'OPTIONS') {
+    const origin = req.headers.origin || '';
+    const allowed = process.env.ALLOWED_ORIGIN || 'https://sifat-there.vercel.app';
+    res.setHeader('Access-Control-Allow-Origin', origin === allowed ? origin : allowed);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-secret');
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!verifyAdmin(req)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  try {
+    const sheets = await import('../../../src/lib/work/google-sheets');
+    const csv = await sheets.exportApplicationsCSV();
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="applications_${Date.now()}.csv"`);
+    return res.status(200).send(csv);
+  } catch (error) {
+    console.error('Admin export error:', error);
+    return res.status(500).json({ error: 'Failed to export applications' });
+  }
+}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Terminal, Phone, MessageCircle, FileText } from 'lucide-react';
+import { Menu, X, Terminal, Phone, MessageCircle, FileText, Briefcase } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const Navbar: React.FC = () => {
@@ -58,6 +58,14 @@ const Navbar: React.FC = () => {
             <Link to="/cv" className="text-sm font-medium text-slate-400 hover:text-primary transition-colors flex items-center gap-1">
                <FileText size={14} /> CV
             </Link>
+            <Link to="/work" className="text-sm font-bold text-primary hover:text-primaryGlow transition-colors flex items-center gap-1.5 relative">
+               <Briefcase size={14} />
+               <span className="relative">
+                 Get Hired to Dial
+                 <span className="absolute -bottom-1 left-0 w-full h-px bg-gradient-to-r from-primary/0 via-primary to-primary/0" />
+               </span>
+               <span className="absolute -inset-2 bg-primary/5 rounded-lg blur-sm -z-10" />
+            </Link>
             <button 
               onClick={() => handleNavigation('contact')} 
               className="px-5 py-2.5 rounded-lg bg-white text-background text-sm font-bold hover:bg-primary hover:text-white hover:shadow-neon transition-all flex items-center gap-2"
@@ -92,6 +100,12 @@ const Navbar: React.FC = () => {
               className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors flex items-center gap-2"
             >
               <FileText size={16} /> View CV
+            </Link>
+            <Link 
+              to="/work" 
+              className="w-full text-left px-4 py-3 text-sm font-bold text-primary hover:text-primaryGlow hover:bg-primary/5 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <Briefcase size={16} /> Get Hired to Dial
             </Link>
             <button 
               onClick={() => handleNavigation('contact')} 
