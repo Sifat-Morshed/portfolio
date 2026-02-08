@@ -2,7 +2,7 @@
 // Poll application status by App ID
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import * as sheets from '../lib/google-sheets';
+import * as sheets from '../lib/google-sheets.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS on every response

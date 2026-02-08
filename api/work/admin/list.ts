@@ -2,7 +2,7 @@
 // Fetch all applications for admin dashboard
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import * as sheets from '../../lib/google-sheets';
+import * as sheets from '../../lib/google-sheets.js';
 
 function verifyAdmin(req: VercelRequest): boolean {
   const authHeader = req.headers.authorization;

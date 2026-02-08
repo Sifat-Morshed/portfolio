@@ -1,15 +1,8 @@
-// Google Drive API v3 adapter for Work With Me module (server-side)
-// Stores CVs (PDF) and Audio (MP3/WAV/M4A) in a dedicated folder
+// Google Drive API v3 adapter (plain JS for Vercel serverless runtime)
 
 const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
 
-interface DriveConfig {
-  serviceAccountEmail: string;
-  privateKey: string;
-  folderId: string;
-}
-
-function getConfig(): DriveConfig {
+function getConfig() {
   return {
     serviceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '',
     privateKey: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
@@ -17,7 +10,7 @@ function getConfig(): DriveConfig {
   };
 }
 
-async function getAccessToken(): Promise<string> {
+async function getAccessToken() {
   const config = getConfig();
   const now = Math.floor(Date.now() / 1000);
 
@@ -79,12 +72,7 @@ async function getAccessToken(): Promise<string> {
   return tokenData.access_token;
 }
 
-// Upload a file to Google Drive in the configured folder
-export async function uploadFile(
-  fileName: string,
-  mimeType: string,
-  fileBuffer: ArrayBuffer
-): Promise<string> {
+export async function uploadFile(fileName, mimeType, fileBuffer) {
   const config = getConfig();
   const token = await getAccessToken();
 
@@ -93,11 +81,10 @@ export async function uploadFile(
     parents: [config.folderId],
   };
 
-  // Use multipart upload
   const boundary = 'work_module_boundary';
   const metaPart = JSON.stringify(metadata);
 
-  const bodyParts: Uint8Array[] = [];
+  const bodyParts = [];
   const enc = new TextEncoder();
 
   bodyParts.push(enc.encode(
@@ -132,9 +119,8 @@ export async function uploadFile(
   }
 
   const fileData = await uploadRes.json();
-  const fileId: string = fileData.id;
+  const fileId = fileData.id;
 
-  // Set permissions to "Anyone with the link" for Admin playback
   await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
     method: 'POST',
     headers: {
