@@ -70,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
       const decoded = JSON.parse(jsonPayload);
 
-      const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'sifatmorshed123@gmail.com';
+      const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'sifat.morshed.dev@gmail.com';
 
       const session = {
         user: {
@@ -171,7 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const devSignIn = (asAdmin = false) => {
     const devUser: AuthUser = {
       name: asAdmin ? 'Dev Admin' : 'Dev Applicant',
-      email: asAdmin ? (import.meta.env.VITE_ADMIN_EMAIL || 'sifatmorshed123@gmail.com') : 'dev-test@example.com',
+      email: asAdmin ? (import.meta.env.VITE_ADMIN_EMAIL || 'sifat.morshed.dev@gmail.com') : 'dev-test@example.com',
     };
     setUser(devUser);
     setIsAdmin(asAdmin);

@@ -3,7 +3,7 @@ import { Mail, MessageCircle, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-
 import SectionTitle from './ui/SectionTitle';
 
 const Contact: React.FC = () => {
-  const email = "sifatmorshed123@gmail.com";
+  const email = "sifat.morshed.dev@gmail.com";
   const whatsappLink = "https://wa.link/n3f4zo";
 
   // Contact form state
