@@ -18,6 +18,7 @@ portfolio/
 .env.local
 .env.production
 .env.development
+vercel-env-vars.txt
 
 # Internal docs / blueprints (not for public repo)
 docs/

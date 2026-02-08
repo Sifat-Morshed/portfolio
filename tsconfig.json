@@ -29,9 +29,7 @@
   "include": [
     "src",
     "components",
+    "api",
     "vite-env.d.ts"
-  ],
-  "exclude": [
-    "api"
   ]
 }
