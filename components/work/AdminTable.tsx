@@ -35,6 +35,19 @@ const STATUS_LABELS: Record<ApplicationStatus, string> = {
   REJECTED: 'Rejected',
 };
 
+// Safe date formatter - returns fallback if date is invalid
+const formatDate = (dateStr: string | undefined | null, fallback = '—'): string => {
+  if (!dateStr) return fallback;
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? fallback : d.toLocaleDateString();
+};
+
+const formatDateLong = (dateStr: string | undefined | null, fallback = '—'): string => {
+  if (!dateStr) return fallback;
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? fallback : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
 // Quick filters for common role categories
 const QUICK_FILTERS = [
   { label: 'All', value: '' },
@@ -405,7 +418,7 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                       </button>
                     </td>
                     <td className="px-4 py-3 text-slate-400 whitespace-nowrap">
-                      {new Date(app.timestamp).toLocaleDateString()}
+                      {formatDate(app.timestamp)}
                     </td>
                     <td className="px-4 py-3 text-white font-medium">{app.full_name}</td>
                     <td className="px-4 py-3 text-slate-400">{app.email}</td>
@@ -493,7 +506,7 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                             {app.status === 'HIRED' && app.started_date && (
                               <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5">
                                 <p className="text-[10px] text-emerald-400 uppercase tracking-wider">Started Working</p>
-                                <p className="text-xs text-white mt-0.5">{new Date(app.started_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                                <p className="text-xs text-white mt-0.5">{formatDateLong(app.started_date)}</p>
                               </div>
                             )}
                             <div>
@@ -600,7 +613,7 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                         {STATUS_LABELS[app.status] || app.status}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 truncate">{app.role_title} · {new Date(app.timestamp).toLocaleDateString()}</p>
+                    <p className="text-xs text-slate-500 truncate">{app.role_title} · {formatDate(app.timestamp)}</p>
                   </div>
                   <ChevronDown
                     size={16}
@@ -698,7 +711,7 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                       {app.status === 'HIRED' && app.started_date && (
                         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5 mt-2">
                           <p className="text-[10px] text-emerald-400 uppercase tracking-wider">Started Working</p>
-                          <p className="text-xs text-white mt-0.5">{new Date(app.started_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                          <p className="text-xs text-white mt-0.5">{formatDateLong(app.started_date)}</p>
                         </div>
                       )}
                     </div>
