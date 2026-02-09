@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Loader2, ShieldCheck, LogOut, RefreshCw, ExternalLink, DollarSign, Users } from 'lucide-react';
+import { Loader2, ShieldCheck, LogOut, RefreshCw, ExternalLink, DollarSign, Users, Send, AlertTriangle, Skull } from 'lucide-react';
 import { useAuth } from '../../src/lib/work/AuthContext';
 import AdminTable from './AdminTable';
 import type { ApplicationRow, ApplicationStatus } from '../../src/lib/work/types';
@@ -29,6 +29,7 @@ const MOCK_APPLICATIONS: ApplicationRow[] = DEV_MODE
         last_updated: new Date(Date.now() - 2 * 86400000).toISOString(),
         started_date: '',
         email_log: 'NEW',
+        rejection_date: '',
       },
       {
         app_id: 'DEV-002',
@@ -49,6 +50,7 @@ const MOCK_APPLICATIONS: ApplicationRow[] = DEV_MODE
         last_updated: new Date(Date.now() - 12 * 3600000).toISOString(),
         started_date: '',
         email_log: 'NEW,AUDIO_PASS',
+        rejection_date: '',
       },
       {
         app_id: 'DEV-003',
@@ -69,6 +71,7 @@ const MOCK_APPLICATIONS: ApplicationRow[] = DEV_MODE
         last_updated: new Date(Date.now() - 3 * 86400000).toISOString(),
         started_date: '',
         email_log: 'NEW,AUDIO_PASS,INTERVIEW',
+        rejection_date: '',
       },
       {
         app_id: 'DEV-004',
@@ -89,6 +92,7 @@ const MOCK_APPLICATIONS: ApplicationRow[] = DEV_MODE
         last_updated: new Date(Date.now() - 7 * 86400000).toISOString(),
         started_date: new Date(Date.now() - 10 * 86400000).toISOString(),
         email_log: 'NEW,AUDIO_PASS,INTERVIEW,HIRED',
+        rejection_date: '',
       },
       {
         app_id: 'DEV-005',
@@ -109,6 +113,7 @@ const MOCK_APPLICATIONS: ApplicationRow[] = DEV_MODE
         last_updated: new Date(Date.now() - 7 * 86400000).toISOString(),
         started_date: '',
         email_log: 'NEW,REJECTED',
+        rejection_date: new Date(Date.now() - 7 * 86400000).toISOString(),
       },
     ]
   : [];
@@ -402,7 +407,212 @@ const AdminDashboard: React.FC = () => {
           onDelete={handleDelete}
           onExport={handleExport}
         />
+
+        {/* Manual Email Sender */}
+        <ManualEmailSender userEmail={user?.email || ''} />
+
+        {/* Self-Destruct */}
+        <SelfDestructSection userEmail={user?.email || ''} />
         </>
+      )}
+    </div>
+  );
+};
+
+// ─── Manual Email Sender ───────────────────────────────────────────────────────
+const ManualEmailSender: React.FC<{ userEmail: string }> = ({ userEmail }) => {
+  const [to, setTo] = useState('');
+  const [subject, setSubject] = useState('');
+  const [content, setContent] = useState('');
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const handleSend = async () => {
+    if (!to || !subject || !content) { setResult({ ok: false, msg: 'All fields are required' }); return; }
+    setSending(true);
+    setResult(null);
+    try {
+      const res = await fetch('/api/work/admin/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userEmail}` },
+        body: JSON.stringify({ to, subject, content }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to send');
+      }
+      setResult({ ok: true, msg: 'Email sent successfully!' });
+      setTo(''); setSubject(''); setContent('');
+    } catch (err) {
+      setResult({ ok: false, msg: err instanceof Error ? err.message : 'Failed to send email' });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="mt-8 bg-white/[0.02] border border-white/10 rounded-xl p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Send size={16} className="text-primary" />
+        <h3 className="text-lg font-bold text-white">Manual Email Sender</h3>
+      </div>
+      <p className="text-xs text-slate-500 mb-4">Send emails using the portfolio dark theme template. Content will be formatted automatically.</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <input
+          type="email" value={to} onChange={(e) => setTo(e.target.value)}
+          placeholder="Recipient email..."
+          className="px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-primary focus:outline-none"
+        />
+        <input
+          type="text" value={subject} onChange={(e) => setSubject(e.target.value)}
+          placeholder="Subject..."
+          className="px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-primary focus:outline-none"
+        />
+      </div>
+      <textarea
+        value={content} onChange={(e) => setContent(e.target.value)}
+        rows={4} placeholder="Email content (supports line breaks)..."
+        className="w-full px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-primary focus:outline-none resize-none mb-3"
+      />
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleSend} disabled={sending}
+          className="flex items-center gap-2 px-5 py-2 bg-primary/10 border border-primary/20 text-primary rounded-lg text-sm font-medium hover:bg-primary/20 transition-colors disabled:opacity-50"
+        >
+          {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+          {sending ? 'Sending...' : 'Send Email'}
+        </button>
+        {result && (
+          <p className={`text-xs ${result.ok ? 'text-emerald-400' : 'text-red-400'}`}>{result.msg}</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Self-Destruct ─────────────────────────────────────────────────────────────
+const SelfDestructSection: React.FC<{ userEmail: string }> = ({ userEmail }) => {
+  const [stage, setStage] = useState(0); // 0=hidden, 1-3=confirms, 4=password, 5=final question
+  const [password, setPassword] = useState('');
+  const [finalAnswer, setFinalAnswer] = useState('');
+  const [destroying, setDestroying] = useState(false);
+  const [destroyed, setDestroyed] = useState<string | null>(null);
+  const [error, setError] = useState('');
+
+  const confirmMessages = [
+    'Are you sure you want to activate self-destruct? This will permanently delete ALL data.',
+    'This action is IRREVERSIBLE. All applications, files, and records will be gone forever.',
+    'Final warning: There is NO undo. Everything will be destroyed. Continue?',
+  ];
+
+  const handleConfirm = () => {
+    if (stage < 3) { setStage(stage + 1); setError(''); }
+    else if (stage === 3) { setStage(4); setError(''); }
+  };
+
+  const handlePasswordSubmit = () => {
+    if (!password.trim()) { setError('Enter the password'); return; }
+    setStage(5); setError('');
+  };
+
+  const handleFinalSubmit = async () => {
+    if (!finalAnswer.trim()) { setError('Answer the question'); return; }
+    setDestroying(true); setError('');
+    try {
+      const res = await fetch('/api/work/admin/self-destruct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userEmail}` },
+        body: JSON.stringify({ password, final_answer: finalAnswer }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Self-destruct failed'); setDestroying(false); return; }
+      setDestroyed(data.timestamp);
+    } catch {
+      setError('Self-destruct request failed'); setDestroying(false);
+    }
+  };
+
+  if (destroyed) {
+    return (
+      <div className="mt-8 bg-red-500/5 border border-red-500/20 rounded-xl p-12 text-center">
+        <Skull size={48} className="text-red-500 mx-auto mb-4" />
+        <h3 className="text-xl font-bold text-red-400 mb-2">All Data Destroyed</h3>
+        <p className="text-sm text-slate-500">Destruction completed at {new Date(destroyed).toLocaleString()}</p>
+        <p className="text-xs text-slate-600 mt-2">There is nothing left.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-8 bg-white/[0.01] border border-red-500/10 rounded-xl p-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <AlertTriangle size={16} className="text-red-400/60" />
+          <h3 className="text-sm font-medium text-red-400/60">Danger Zone</h3>
+        </div>
+        {stage === 0 && (
+          <button
+            onClick={() => setStage(1)}
+            className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-xs font-medium hover:bg-red-500/20 transition-colors"
+          >
+            Self-Destruct
+          </button>
+        )}
+      </div>
+
+      {stage >= 1 && stage <= 3 && (
+        <div className="mt-4 p-4 bg-red-500/5 border border-red-500/20 rounded-lg">
+          <p className="text-sm text-red-300 mb-3">{confirmMessages[stage - 1]}</p>
+          <div className="flex gap-2">
+            <button onClick={handleConfirm} className="px-4 py-1.5 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg text-xs font-medium hover:bg-red-500/30 transition-colors">
+              Yes, Continue ({stage}/5)
+            </button>
+            <button onClick={() => { setStage(0); setPassword(''); setFinalAnswer(''); setError(''); }} className="px-4 py-1.5 bg-white/5 border border-white/10 text-slate-400 rounded-lg text-xs font-medium hover:bg-white/10 transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {stage === 4 && (
+        <div className="mt-4 p-4 bg-red-500/5 border border-red-500/20 rounded-lg">
+          <p className="text-sm text-red-300 mb-1">Enter the self-destruct password</p>
+          <p className="text-xs text-slate-600 mb-3">Hint: "Money is?"</p>
+          <input
+            type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password..."
+            className="w-full px-3 py-2 bg-[#0A0A0B] border border-red-500/20 rounded-lg text-sm text-white focus:border-red-400 focus:outline-none mb-2"
+          />
+          <div className="flex gap-2">
+            <button onClick={handlePasswordSubmit} className="px-4 py-1.5 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg text-xs font-medium hover:bg-red-500/30 transition-colors">
+              Continue (4/5)
+            </button>
+            <button onClick={() => { setStage(0); setPassword(''); setFinalAnswer(''); setError(''); }} className="px-4 py-1.5 bg-white/5 border border-white/10 text-slate-400 rounded-lg text-xs font-medium hover:bg-white/10 transition-colors">
+              Cancel
+            </button>
+          </div>
+          {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+        </div>
+      )}
+
+      {stage === 5 && (
+        <div className="mt-4 p-4 bg-red-500/5 border border-red-500/20 rounded-lg">
+          <p className="text-sm text-red-300 mb-1">Final question: Who is the love of your life?</p>
+          <input
+            type="text" value={finalAnswer} onChange={(e) => setFinalAnswer(e.target.value)}
+            placeholder="Your answer..."
+            className="w-full px-3 py-2 bg-[#0A0A0B] border border-red-500/20 rounded-lg text-sm text-white focus:border-red-400 focus:outline-none mb-2"
+          />
+          <div className="flex gap-2">
+            <button onClick={handleFinalSubmit} disabled={destroying} className="px-4 py-1.5 bg-red-600/30 border border-red-500/40 text-red-300 rounded-lg text-xs font-bold hover:bg-red-600/50 transition-colors disabled:opacity-50">
+              {destroying ? 'Destroying...' : 'DESTROY EVERYTHING (5/5)'}
+            </button>
+            <button onClick={() => { setStage(0); setPassword(''); setFinalAnswer(''); setError(''); }} className="px-4 py-1.5 bg-white/5 border border-white/10 text-slate-400 rounded-lg text-xs font-medium hover:bg-white/10 transition-colors">
+              Cancel
+            </button>
+          </div>
+          {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+        </div>
       )}
     </div>
   );

@@ -186,6 +186,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       blacklist_acknowledged: fields.blacklist_acknowledged === 'true' ? 'true' : 'false',
     };
 
+    // Duplicate submission check: 1 email = 1 submission only
+    const existingApp = await sheets.getApplicationByEmail(sanitized.email);
+    if (existingApp) {
+      return res.status(409).json({
+        error: 'An application with this email already exists.',
+        existing_id: existingApp.app_id,
+      });
+    }
+
     // Validate CV file (stored in memory, emailed as attachment to admin)
     let cvLink = '';
     let cvAttachment: { filename: string; content: Buffer; contentType: string } | null = null;
@@ -241,6 +250,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       last_updated: now,
       started_date: '',
       email_log: 'NEW',
+      rejection_date: '',
     });
 
     // Send email notifications in background (don't block the response)
@@ -278,26 +288,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               from: `"Sifat Morshed" <${process.env.EMAIL_SERVER_USER}>`,
               replyTo: process.env.EMAIL_SERVER_USER,
               to: sanitized.email,
-              subject: `Application Received – ${sanitized.role_title}`,
+              subject: `Application Received - ${sanitized.role_title}`,
               headers: {
                 'X-Mailer': 'SifatPortfolio/1.0',
                 'Precedence': 'bulk',
               },
               html: `
-                <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; background: #0A0A0B; color: #e2e8f0; border-radius: 12px; overflow: hidden;">
-                  <div style="background: linear-gradient(135deg, #06b6d4, #3b82f6); padding: 24px 32px;">
-                    <h2 style="margin: 0; color: #fff; font-size: 20px;">Application Received</h2>
+                <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;background:#050505;border:1px solid #111113;border-radius:12px;overflow:hidden;">
+                  <div style="background:#0A0A0B;border-bottom:2px solid #06b6d4;padding:28px 32px;text-align:center;">
+                    <p style="margin:0 0 4px;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:2px;">New Application</p>
+                    <h1 style="margin:0;color:#06b6d4;font-size:22px;font-weight:700;">Application Received</h1>
                   </div>
-                  <div style="padding: 32px;">
-                    <p style="color: #94a3b8;">Hi <strong style="color: #fff;">${sanitized.full_name}</strong>,</p>
-                    <p style="color: #94a3b8;">Your application for <strong style="color: #06b6d4;">${sanitized.role_title}</strong> has been received and is under review.</p>
-                    <div style="background: #111; border: 1px solid #222; border-radius: 8px; padding: 16px; margin: 20px 0;">
-                      <p style="margin: 0 0 4px; color: #64748b; font-size: 12px;">Your Application ID:</p>
-                      <p style="margin: 0; font-family: monospace; font-size: 18px; color: #06b6d4; font-weight: bold;">${appId}</p>
+                  <div style="padding:28px 32px;background:#050505;">
+                    <p style="color:#94a3b8;font-size:14px;line-height:1.7;margin:0 0 16px;">Hi <strong style="color:#e2e8f0;">${sanitized.full_name}</strong>,</p>
+                    <p style="color:#94a3b8;font-size:14px;line-height:1.7;margin:0 0 20px;">Your application for <strong style="color:#06b6d4;">${sanitized.role_title}</strong> has been received and is under review.</p>
+                    <div style="background:#0A0A0B;border:1px solid #1e293b;border-radius:8px;padding:16px;margin:0 0 20px;text-align:center;">
+                      <p style="margin:0 0 4px;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Your Application ID</p>
+                      <p style="margin:0;font-family:monospace;font-size:20px;color:#06b6d4;font-weight:700;">${appId}</p>
                     </div>
-                    <p style="color: #94a3b8;">Track your status anytime:</p>
-                    <a href="${siteUrl}/work/status?id=${appId}" style="display: inline-block; background: #06b6d4; color: #fff; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Check Status</a>
-                    <p style="color: #64748b; font-size: 12px; margin-top: 24px;">Best regards,<br>Sifat Morshed</p>
+                    <div style="text-align:center;margin:0 0 20px;">
+                      <a href="${siteUrl}/work/status?id=${appId}" style="display:inline-block;background:#06b6d4;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Track Your Status</a>
+                    </div>
+                  </div>
+                  <div style="background:#0A0A0B;border-top:1px solid #1e293b;padding:16px 32px;text-align:center;">
+                    <p style="color:#475569;font-size:11px;margin:0;">Sifat Morshed &middot; <a href="${siteUrl}" style="color:#06b6d4;text-decoration:none;">sifat-there.vercel.app</a></p>
                   </div>
                 </div>
               `,
@@ -317,26 +331,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 subject: `New Application: ${sanitized.full_name} - ${sanitized.role_title}`,
                 attachments,
                 html: `
-                  <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; background: #0A0A0B; color: #e2e8f0; border-radius: 12px; overflow: hidden;">
-                    <div style="background: linear-gradient(135deg, #f59e0b, #ef4444); padding: 20px 32px;">
-                      <h2 style="margin: 0; color: #fff; font-size: 18px;">New Application Received</h2>
+                  <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;background:#050505;border:1px solid #111113;border-radius:12px;overflow:hidden;">
+                    <div style="background:#0A0A0B;border-bottom:2px solid #f59e0b;padding:24px 32px;text-align:center;">
+                      <p style="margin:0 0 4px;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:2px;">Admin Alert</p>
+                      <h2 style="margin:0;color:#f59e0b;font-size:18px;font-weight:700;">New Application Received</h2>
                     </div>
-                    <div style="padding: 24px 32px;">
-                      <table style="width: 100%; border-collapse: collapse;">
-                        <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">Name</td><td style="color: #fff; padding: 6px 0; font-weight: 600;">${sanitized.full_name}</td></tr>
-                        <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">Email</td><td style="color: #06b6d4; padding: 6px 0;">${sanitized.email}</td></tr>
-                        <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">Phone</td><td style="color: #fff; padding: 6px 0;">${sanitized.phone}</td></tr>
-                        <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">Nationality</td><td style="color: #fff; padding: 6px 0;">${sanitized.nationality}</td></tr>
-                        <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">Role</td><td style="color: #f59e0b; padding: 6px 0; font-weight: 600;">${sanitized.role_title}</td></tr>
-                        <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">Reference</td><td style="color: #fff; padding: 6px 0;">${sanitized.reference || '—'}</td></tr>
-                        <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">App ID</td><td style="font-family: monospace; color: #06b6d4; padding: 6px 0;">${appId}</td></tr>
-                        <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">CV</td><td style="color: #fff; padding: 6px 0;">${cvAttachment ? 'Attached' : 'None'}</td></tr>
-                        <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">Audio</td><td style="color: #fff; padding: 6px 0;">${audioAttachment ? 'Attached' : 'None'}</td></tr>
+                    <div style="padding:24px 32px;background:#050505;">
+                      <table style="width:100%;border-collapse:collapse;">
+                        <tr><td style="color:#64748b;padding:6px 0;font-size:13px;">Name</td><td style="color:#e2e8f0;padding:6px 0;font-weight:600;">${sanitized.full_name}</td></tr>
+                        <tr><td style="color:#64748b;padding:6px 0;font-size:13px;">Email</td><td style="color:#06b6d4;padding:6px 0;">${sanitized.email}</td></tr>
+                        <tr><td style="color:#64748b;padding:6px 0;font-size:13px;">Phone</td><td style="color:#e2e8f0;padding:6px 0;">${sanitized.phone}</td></tr>
+                        <tr><td style="color:#64748b;padding:6px 0;font-size:13px;">Nationality</td><td style="color:#e2e8f0;padding:6px 0;">${sanitized.nationality}</td></tr>
+                        <tr><td style="color:#64748b;padding:6px 0;font-size:13px;">Role</td><td style="color:#f59e0b;padding:6px 0;font-weight:600;">${sanitized.role_title}</td></tr>
+                        <tr><td style="color:#64748b;padding:6px 0;font-size:13px;">Reference</td><td style="color:#e2e8f0;padding:6px 0;">${sanitized.reference || '—'}</td></tr>
+                        <tr><td style="color:#64748b;padding:6px 0;font-size:13px;">App ID</td><td style="font-family:monospace;color:#06b6d4;padding:6px 0;">${appId}</td></tr>
+                        <tr><td style="color:#64748b;padding:6px 0;font-size:13px;">CV</td><td style="color:#e2e8f0;padding:6px 0;">${cvAttachment ? 'Attached' : 'None'}</td></tr>
+                        <tr><td style="color:#64748b;padding:6px 0;font-size:13px;">Audio</td><td style="color:#e2e8f0;padding:6px 0;">${audioAttachment ? 'Attached' : 'None'}</td></tr>
                       </table>
-                      ${(cvAttachment || audioAttachment) ? '<p style="color: #22c55e; margin-top: 16px; font-size: 13px;">Files are attached to this email.</p>' : ''}
-                      <div style="margin-top: 20px;">
-                        <a href="${siteUrl}/work/admin" style="display: inline-block; background: #06b6d4; color: #fff; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Open Admin Dashboard</a>
+                      ${(cvAttachment || audioAttachment) ? '<p style="color:#10b981;margin-top:16px;font-size:13px;">Files are attached to this email.</p>' : ''}
+                      <div style="margin-top:20px;text-align:center;">
+                        <a href="${siteUrl}/work/admin" style="display:inline-block;background:#06b6d4;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Open Admin Dashboard</a>
                       </div>
+                    </div>
+                    <div style="background:#0A0A0B;border-top:1px solid #1e293b;padding:12px 32px;text-align:center;">
+                      <p style="color:#475569;font-size:11px;margin:0;">Work With Me Bot</p>
                     </div>
                   </div>
                 `,

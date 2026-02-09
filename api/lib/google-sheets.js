@@ -76,7 +76,7 @@ const COLUMNS = [
   'app_id', 'timestamp', 'status', 'company_id', 'role_id', 'role_title',
   'full_name', 'email', 'phone', 'nationality', 'reference',
   'blacklist_acknowledged', 'cv_link', 'audio_link', 'notes', 'last_updated',
-  'started_date', 'email_log',
+  'started_date', 'email_log', 'rejection_date',
 ];
 
 export async function appendApplication(row) {
@@ -84,7 +84,7 @@ export async function appendApplication(row) {
   const token = await getAccessToken();
   const values = COLUMNS.map((col) => row[col] || '');
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/Applications!A:R:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/Applications!A:S:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -105,7 +105,7 @@ export async function getAllApplications() {
   const config = getConfig();
   const token = await getAccessToken();
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/Applications!A:R`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/Applications!A:S`;
 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -133,6 +133,11 @@ export async function getAllApplications() {
 export async function getApplicationById(appId) {
   const all = await getAllApplications();
   return all.find((r) => r.app_id === appId) || null;
+}
+
+export async function getApplicationByEmail(email) {
+  const all = await getAllApplications();
+  return all.find((r) => r.email && r.email.toLowerCase() === email.toLowerCase()) || null;
 }
 
 export async function updateApplicationStatus(appId, status, notes, extraFields) {
@@ -168,13 +173,16 @@ export async function updateApplicationStatus(appId, status, notes, extraFields)
     updates.push({ range: `Applications!O${rowIndex}`, values: [[notes]] });
   }
 
-  // Extra fields: started_date (col Q), email_log (col R)
+  // Extra fields: started_date (col Q), email_log (col R), rejection_date (col S)
   if (extraFields) {
     if (extraFields.started_date !== undefined) {
       updates.push({ range: `Applications!Q${rowIndex}`, values: [[extraFields.started_date]] });
     }
     if (extraFields.email_log !== undefined) {
       updates.push({ range: `Applications!R${rowIndex}`, values: [[extraFields.email_log]] });
+    }
+    if (extraFields.rejection_date !== undefined) {
+      updates.push({ range: `Applications!S${rowIndex}`, values: [[extraFields.rejection_date]] });
     }
   }
 
@@ -203,13 +211,13 @@ export async function updateApplicationStatus(appId, status, notes, extraFields)
 // Apply background color to the entire row based on status
 async function applyRowColor(sheetId, token, rowIndex, status) {
   const colors = {
-    HIRED: { red: 0.06, green: 0.45, blue: 0.31, alpha: 0.15 },    // green tint
-    REJECTED: { red: 0.94, green: 0.27, blue: 0.27, alpha: 0.15 }, // red tint
-    INTERVIEW: { red: 0.23, green: 0.51, blue: 0.96, alpha: 0.1 }, // blue tint
-    AUDIO_PASS: { red: 0.92, green: 0.72, blue: 0.03, alpha: 0.1 }, // yellow tint
+    HIRED: { red: 0.85, green: 0.95, blue: 0.85 },      // light green (pastel)
+    REJECTED: { red: 0.95, green: 0.80, blue: 0.80 },    // full row light red
+    INTERVIEW: { red: 0.85, green: 0.90, blue: 1.0 },    // light blue tint
+    AUDIO_PASS: { red: 1.0, green: 0.97, blue: 0.85 },   // light yellow tint
+    NEW: null, // reset to default
   };
   const color = colors[status];
-  if (!color) return; // NEW has no special color
 
   try {
     // Get the sheet's numeric ID (usually 0 for the first sheet)
@@ -219,6 +227,8 @@ async function applyRowColor(sheetId, token, rowIndex, status) {
     const sheet = metaData.sheets?.find((s) => s.properties?.title === 'Applications');
     const numericSheetId = sheet?.properties?.sheetId ?? 0;
 
+    const bgColor = color ? { red: color.red, green: color.green, blue: color.blue } : { red: 1, green: 1, blue: 1 };
+
     const req = {
       requests: [{
         repeatCell: {
@@ -227,15 +237,11 @@ async function applyRowColor(sheetId, token, rowIndex, status) {
             startRowIndex: rowIndex - 1,
             endRowIndex: rowIndex,
             startColumnIndex: 0,
-            endColumnIndex: 18,
+            endColumnIndex: 19,
           },
           cell: {
             userEnteredFormat: {
-              backgroundColor: {
-                red: color.red,
-                green: color.green,
-                blue: color.blue,
-              },
+              backgroundColor: bgColor,
             },
           },
           fields: 'userEnteredFormat.backgroundColor',

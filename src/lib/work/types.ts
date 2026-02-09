@@ -35,6 +35,7 @@ export interface ApplicationRow {
   last_updated: string;
   started_date: string;   // ISO date when worker started (set on HIRED)
   email_log: string;      // comma-separated statuses that already triggered emails
+  rejection_date: string; // ISO date when rejected (set on REJECTED)
 }
 
 // Status rank for forward-only progression
