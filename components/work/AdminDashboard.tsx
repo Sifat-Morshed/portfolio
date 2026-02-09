@@ -444,6 +444,7 @@ const AdminDashboard: React.FC = () => {
           onDelete={handleDelete}
           onBulkDelete={handleBulkDelete}
           onExport={handleExport}
+          userEmail={user?.email || ''}
         />
 
         {/* Manual Application Logger */}

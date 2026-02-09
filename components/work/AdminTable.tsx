@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronDown, ChevronUp, Search, Download, ExternalLink, Play, Filter, FileDown, Phone, Mail, Globe, User, Trash2, CheckSquare, Square } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, Download, ExternalLink, Play, Filter, FileDown, Phone, Mail, Globe, User, Trash2, CheckSquare, Square, Send, Loader2, FileText } from 'lucide-react';
 import type { ApplicationRow, ApplicationStatus } from '../../src/lib/work/types';
 
 interface AdminTableProps {
@@ -8,6 +8,7 @@ interface AdminTableProps {
   onDelete: (appId: string) => void;
   onBulkDelete: (appIds: string[]) => void;
   onExport: () => void;
+  userEmail: string;
 }
 
 const STATUS_OPTIONS: ApplicationStatus[] = [
@@ -44,7 +45,129 @@ const QUICK_FILTERS = [
 type SortField = 'timestamp' | 'full_name' | 'status' | 'role_id';
 type SortDir = 'asc' | 'desc';
 
-const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, onDelete, onBulkDelete, onExport }) => {
+// Email templates for inline sender (same as AdminDashboard)
+const INLINE_EMAIL_TEMPLATES: { label: string; subject: (app: ApplicationRow) => string; content: (app: ApplicationRow) => string }[] = [
+  {
+    label: 'Custom',
+    subject: (app) => `RE: ${app.role_title} [${app.app_id}]`,
+    content: () => '',
+  },
+  {
+    label: 'App Received',
+    subject: (app) => `Application Received – ${app.role_title} [${app.app_id}]`,
+    content: (app) => `Hi ${app.full_name},\n\nThank you for submitting your application. We've received it and it is currently under review.\n\nYour application ID has been assigned and you can track your status anytime using the link provided in your confirmation email.\n\nWe'll be in touch soon with next steps. If you have any questions in the meantime, feel free to reply to this email.\n\nBest regards,\nSifat Morshed`,
+  },
+  {
+    label: 'Status Update',
+    subject: (app) => `Application Update – ${app.role_title} [${app.app_id}]`,
+    content: (app) => `Hi ${app.full_name},\n\nWe wanted to let you know that your application status has been updated.\n\nPlease check your application status page for the latest details. If you have any questions, don't hesitate to reach out.\n\nBest regards,\nSifat Morshed`,
+  },
+  {
+    label: 'Audio Script',
+    subject: (app) => `Action Required: Audio Recording – ${app.role_title} [${app.app_id}]`,
+    content: (app) => `Hi ${app.full_name},\n\nAs part of your application process, we need you to record a short audio sample (45–60 seconds). This helps us evaluate your English communication and phone presence.\n\nPlease follow the instructions below carefully:\n\n──────────────────\n\nAUDIO RECORDING INSTRUCTIONS\n\nRecord yourself reading the script below. Keep it between 45 and 60 seconds. Use a quiet environment, speak clearly, and don't rush.\n\nPart 1 – Introduction (~30 seconds):\nSpeak naturally about yourself — your name, where you're from, any relevant experience you have, and why you're interested in this role.\n\nPart 2 – Cold Call Roleplay (~15–30 seconds):\nYou are calling a senior IT director named Mr. James. He is busy and skeptical. Your goal is to introduce Silverlight Research, explain you're conducting a short industry survey on the evolving cyber threats in enterprise infrastructure (not selling anything), and convince him to stay on the line for 2 minutes of questions.\n\nStay confident, handle his pushback, and keep it professional.\n\n──────────────────\n\nOnce your recording is ready, you can upload it through your application status page or reply to this email with the audio file attached.\n\nAccepted formats: MP3, WAV, M4A, WEBM (max 5 MB).\n\nSifat Morshed | Independent Contractor | Recruiting for: Silverlight Research`,
+  },
+];
+
+// Inline email sender for individual applicant rows
+const InlineEmailSender: React.FC<{ app: ApplicationRow; userEmail: string }> = ({ app, userEmail }) => {
+  const [open, setOpen] = useState(false);
+  const [templateIdx, setTemplateIdx] = useState(0);
+  const [subject, setSubject] = useState(INLINE_EMAIL_TEMPLATES[0].subject(app));
+  const [content, setContent] = useState('');
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const applyTemplate = (idx: number) => {
+    setTemplateIdx(idx);
+    const t = INLINE_EMAIL_TEMPLATES[idx];
+    setSubject(t.subject(app));
+    setContent(t.content(app));
+    setResult(null);
+  };
+
+  const handleSend = async () => {
+    if (!subject || !content) { setResult({ ok: false, msg: 'Subject and content required' }); return; }
+    setSending(true);
+    setResult(null);
+    try {
+      const res = await fetch('/api/work/admin/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userEmail}` },
+        body: JSON.stringify({ to: app.email, subject, content }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to send');
+      }
+      setResult({ ok: true, msg: 'Sent!' });
+      setTimeout(() => setResult(null), 3000);
+    } catch (err) {
+      setResult({ ok: false, msg: err instanceof Error ? err.message : 'Send failed' });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(true); applyTemplate(0); }}
+        className="flex items-center gap-1.5 text-xs text-primary/70 hover:text-primary transition-colors"
+      >
+        <Send size={12} /> Send Email
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] text-slate-600 uppercase tracking-wider">Send Email to {app.full_name}</p>
+        <button onClick={() => { setOpen(false); setResult(null); }} className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors">✕ Close</button>
+      </div>
+      {/* Template pills */}
+      <div className="flex flex-wrap gap-1.5">
+        {INLINE_EMAIL_TEMPLATES.map((t, i) => (
+          <button
+            key={i}
+            onClick={() => applyTemplate(i)}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-all ${
+              templateIdx === i
+                ? 'bg-primary/20 text-primary border border-primary/30'
+                : 'bg-white/5 text-slate-500 border border-white/5 hover:border-white/10'
+            }`}
+          >
+            <FileText size={9} />
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <input
+        type="text" value={subject} onChange={(e) => setSubject(e.target.value)}
+        className="w-full px-2.5 py-1.5 bg-[#050505] border border-white/10 rounded-lg text-xs text-white focus:border-primary focus:outline-none"
+        placeholder="Subject..."
+      />
+      <textarea
+        value={content} onChange={(e) => setContent(e.target.value)}
+        rows={templateIdx === 3 ? 10 : 4}
+        className="w-full px-2.5 py-1.5 bg-[#050505] border border-white/10 rounded-lg text-xs text-white focus:border-primary focus:outline-none resize-none leading-relaxed"
+        placeholder="Email content..."
+      />
+      <div className="flex items-center gap-2">
+        <button onClick={handleSend} disabled={sending}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 border border-primary/20 text-primary rounded-lg text-[11px] font-medium hover:bg-primary/20 transition-colors disabled:opacity-50">
+          {sending ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}
+          {sending ? 'Sending...' : 'Send'}
+        </button>
+        <span className="text-[10px] text-slate-600">→ {app.email}</span>
+        {result && <span className={`text-[10px] ${result.ok ? 'text-emerald-400' : 'text-red-400'}`}>{result.msg}</span>}
+      </div>
+    </div>
+  );
+};
+
+const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, onDelete, onBulkDelete, onExport, userEmail }) => {
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -399,6 +522,10 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                                 </button>
                               )}
                             </div>
+                            {/* Inline Email Sender */}
+                            <div className="pt-2 border-t border-white/5">
+                              <InlineEmailSender app={app} userEmail={userEmail} />
+                            </div>
                             {/* Delete Button */}
                             <div className="pt-2 border-t border-white/5">
                               {confirmDeleteId === app.app_id ? (
@@ -602,6 +729,11 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                           Save Notes
                         </button>
                       )}
+                    </div>
+
+                    {/* Inline Email Sender */}
+                    <div className="pt-3 border-t border-white/5">
+                      <InlineEmailSender app={app} userEmail={userEmail} />
                     </div>
 
                     {/* Delete Button */}
