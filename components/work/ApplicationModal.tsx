@@ -209,7 +209,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
         )}
 
         {/* Scrollable content area — takes all remaining space */}
-        <div className="p-6 pb-10 space-y-5" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }} data-lenis-prevent>
+        <div className="p-6 space-y-5" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }} data-lenis-prevent>
           {/* Step: Auth */}
           {step === 'auth' && (
             <div className="text-center py-8">
@@ -328,18 +328,6 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
                 </label>
               </div>
 
-              {error && (
-                <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">
-                  {error}
-                </p>
-              )}
-
-              <button
-                onClick={() => validateIdentity() && setStep('blacklist')}
-                className="w-full py-3 bg-white text-background rounded-lg font-semibold hover:bg-white/90 transition-colors text-sm flex items-center justify-center gap-2"
-              >
-                Continue <ChevronRight size={16} />
-              </button>
             </>
           )}
 
@@ -396,33 +384,6 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
                 </div>
               </div>
 
-              {error && (
-                <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">
-                  {error}
-                </p>
-              )}
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setError(''); setStep('identity'); }}
-                  className="flex-1 py-3 bg-white/5 border border-white/10 text-white rounded-lg font-medium hover:bg-white/10 transition-colors text-sm flex items-center justify-center gap-2"
-                >
-                  <ChevronLeft size={16} /> Back
-                </button>
-                <button
-                  onClick={() => {
-                    if (!blacklistAcknowledged) {
-                      setError('You must acknowledge the compliance notice to proceed.');
-                      return;
-                    }
-                    setError('');
-                    setStep('audio');
-                  }}
-                  className="flex-1 py-3 bg-white text-background rounded-lg font-semibold hover:bg-white/90 transition-colors text-sm flex items-center justify-center gap-2"
-                >
-                  Continue <ChevronRight size={16} />
-                </button>
-              </div>
             </>
           )}
 
@@ -431,35 +392,6 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
             <>
               <AudioUploader onFileSelected={setAudioFile} />
 
-              {/* Error */}
-              {error && (
-                <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">
-                  {error}
-                </p>
-              )}
-
-              {/* Submit */}
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setError(''); setStep('blacklist'); }}
-                  className="flex-1 py-3 bg-white/5 border border-white/10 text-white rounded-lg font-medium hover:bg-white/10 transition-colors text-sm flex items-center justify-center gap-2"
-                >
-                  <ChevronLeft size={16} /> Back
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="flex-1 py-3 bg-white text-background rounded-lg font-semibold hover:bg-white/90 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" /> Submitting...
-                    </>
-                  ) : (
-                    'Submit Application'
-                  )}
-                </button>
-              </div>
             </>
           )}
 
@@ -536,6 +468,74 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
             </div>
           )}
         </div>
+
+        {/* Pinned footer — always visible, never scrolls */}
+        {(step === 'identity' || step === 'blacklist' || step === 'audio') && (
+          <div style={{ flexShrink: 0, borderTop: '1px solid rgba(255,255,255,0.05)', padding: '16px 24px' }}>
+            {error && (
+              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2 mb-3">
+                {error}
+              </p>
+            )}
+
+            {step === 'identity' && (
+              <button
+                onClick={() => validateIdentity() && setStep('blacklist')}
+                className="w-full py-3 bg-white text-background rounded-lg font-semibold hover:bg-white/90 transition-colors text-sm flex items-center justify-center gap-2"
+              >
+                Continue <ChevronRight size={16} />
+              </button>
+            )}
+
+            {step === 'blacklist' && (
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setError(''); setStep('identity'); }}
+                  className="flex-1 py-3 bg-white/5 border border-white/10 text-white rounded-lg font-medium hover:bg-white/10 transition-colors text-sm flex items-center justify-center gap-2"
+                >
+                  <ChevronLeft size={16} /> Back
+                </button>
+                <button
+                  onClick={() => {
+                    if (!blacklistAcknowledged) {
+                      setError('You must acknowledge the compliance notice to proceed.');
+                      return;
+                    }
+                    setError('');
+                    setStep('audio');
+                  }}
+                  className="flex-1 py-3 bg-white text-background rounded-lg font-semibold hover:bg-white/90 transition-colors text-sm flex items-center justify-center gap-2"
+                >
+                  Continue <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
+
+            {step === 'audio' && (
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setError(''); setStep('blacklist'); }}
+                  className="flex-1 py-3 bg-white/5 border border-white/10 text-white rounded-lg font-medium hover:bg-white/10 transition-colors text-sm flex items-center justify-center gap-2"
+                >
+                  <ChevronLeft size={16} /> Back
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="flex-1 py-3 bg-white text-background rounded-lg font-semibold hover:bg-white/90 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> Submitting...
+                    </>
+                  ) : (
+                    'Submit Application'
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
