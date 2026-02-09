@@ -209,7 +209,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
         )}
 
         {/* Scrollable content area — takes all remaining space */}
-        <div className="p-6 space-y-5" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }} data-lenis-prevent>
+        <div className="p-6 pb-10 space-y-5" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }} data-lenis-prevent>
           {/* Step: Auth */}
           {step === 'auth' && (
             <div className="text-center py-8">
