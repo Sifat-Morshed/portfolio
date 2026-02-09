@@ -166,22 +166,16 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      {/* Backdrop — only close on direct click, not bubbled events */}
-      <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onMouseDown={(e) => {
-          if (e.target === e.currentTarget) handleClose();
-        }}
-      />
+      {/* Backdrop — no dismiss on click */}
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
 
-      {/* Modal */}
+      {/* Modal — fixed tall box */}
       <div
-        className="relative bg-[#0A0A0B] border border-white/10 rounded-2xl w-full max-w-lg flex flex-col shadow-2xl shadow-primary/5"
-        style={{ maxHeight: '90vh', overflow: 'hidden' }}
-        onMouseDown={(e) => e.stopPropagation()}
+        className="relative bg-[#0A0A0B] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl shadow-primary/5"
+        style={{ height: '85vh', display: 'flex', flexDirection: 'column' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 rounded-t-2xl shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 rounded-t-2xl" style={{ flexShrink: 0 }}>
           <div>
             <h2 className="text-lg font-display font-bold text-white">
               {step === 'success' ? 'You\'re In!' : `Apply: ${role.title}`}
@@ -195,7 +189,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
 
         {/* Progress Steps */}
         {step !== 'success' && (
-          <div className="px-6 pt-4 pb-2 flex items-center gap-1">
+          <div className="px-6 pt-4 pb-2 flex items-center gap-1" style={{ flexShrink: 0 }}>
             {steps.map((s, i) => (
               <React.Fragment key={s}>
                 <div className={`flex items-center gap-1.5 text-xs font-medium ${
@@ -214,7 +208,8 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
           </div>
         )}
 
-        <div className="p-6 space-y-5 overflow-y-auto" style={{ flex: '1 1 auto', minHeight: 0 }} data-lenis-prevent>
+        {/* Scrollable content area — takes all remaining space */}
+        <div className="p-6 space-y-5" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }} data-lenis-prevent>
           {/* Step: Auth */}
           {step === 'auth' && (
             <div className="text-center py-8">
