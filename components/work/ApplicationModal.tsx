@@ -165,14 +165,14 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
   const stepIndex = step === 'auth' ? 0 : step === 'identity' ? 1 : step === 'blacklist' ? 2 : step === 'audio' ? 3 : 4;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[200] flex items-start justify-center pt-8 pb-4 px-4">
       {/* Backdrop — no dismiss on click */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
 
-      {/* Modal — fixed tall box */}
+      {/* Modal — fixed tall box, starts near top */}
       <div
         className="relative bg-[#0A0A0B] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl shadow-primary/5"
-        style={{ height: '85vh', display: 'flex', flexDirection: 'column' }}
+        style={{ height: 'calc(100vh - 3rem)', display: 'flex', flexDirection: 'column' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 rounded-t-2xl" style={{ flexShrink: 0 }}>
