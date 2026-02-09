@@ -81,6 +81,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
     if (!fullName.trim()) { setError('Please enter your full name'); return false; }
     if (!email.trim()) { setError('Please sign in with Google first'); return false; }
     if (!phone.trim()) { setError('Please enter your phone number'); return false; }
+    if (!/^\+[0-9]+$/.test(phone.replace(/\s/g, ''))) { setError('Phone must start with + and contain only numbers'); return false; }
     if (!nationality) { setError('Please select your nationality'); return false; }
     if (!cvFile) { setError('Please upload your CV (PDF)'); return false; }
 
@@ -276,7 +277,10 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
                   <input
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || /^\+[0-9\s]*$/.test(val)) setPhone(val);
+                    }}
                     className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:border-primary focus:outline-none transition-colors"
                     placeholder="+1 234 567 8900"
                   />

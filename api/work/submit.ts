@@ -63,7 +63,8 @@ function generateAppId(): string {
 
 // Validate phone format (basic)
 function isValidPhone(phone: string): boolean {
-  return /^[\d\s\+\-\(\)]{7,20}$/.test(phone);
+  const clean = phone.replace(/\s/g, '');
+  return /^\+[0-9]{7,20}$/.test(clean);
 }
 
 // Strip HTML tags from string

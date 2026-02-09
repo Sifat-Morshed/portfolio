@@ -476,6 +476,10 @@ const ManualApplicationLogger: React.FC<{ userEmail: string; onLogged: () => voi
       setResult({ ok: false, msg: 'Name, email, phone, and nationality are required' });
       return;
     }
+    if (!/^\+[0-9]+$/.test(form.phone.replace(/\s/g, ''))) {
+      setResult({ ok: false, msg: 'Phone must start with + and contain only numbers' });
+      return;
+    }
     setLogging(true);
     setResult(null);
     try {
@@ -525,7 +529,10 @@ const ManualApplicationLogger: React.FC<{ userEmail: string; onLogged: () => voi
           className="px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-emerald-400 focus:outline-none" />
         <input type="email" value={form.email} onChange={set('email')} placeholder="Email *"
           className="px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-emerald-400 focus:outline-none" />
-        <input type="tel" value={form.phone} onChange={set('phone')} placeholder="Phone *"
+        <input type="tel" value={form.phone} onChange={(e) => {
+          const val = e.target.value;
+          if (val === '' || /^\+[0-9\s]*$/.test(val)) setForm(f => ({ ...f, phone: val }));
+        }} placeholder="Phone (e.g. +1234567890) *"
           className="px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-emerald-400 focus:outline-none" />
         <input type="text" value={form.nationality} onChange={set('nationality')} placeholder="Nationality *"
           className="px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-emerald-400 focus:outline-none" />

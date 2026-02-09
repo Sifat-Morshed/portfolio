@@ -381,6 +381,8 @@ async function handleManualLog(req: VercelRequest, res: VercelResponse) {
     if (!full_name || typeof full_name !== 'string') return res.status(400).json({ error: 'Name is required' });
     if (!email || typeof email !== 'string' || !email.includes('@')) return res.status(400).json({ error: 'Valid email is required' });
     if (!phone || typeof phone !== 'string') return res.status(400).json({ error: 'Phone is required' });
+    const cleanPhone = phone.replace(/\s/g, '');
+    if (!/^\+[0-9]+$/.test(cleanPhone)) return res.status(400).json({ error: 'Phone must start with + and contain only numbers' });
     if (!nationality || typeof nationality !== 'string') return res.status(400).json({ error: 'Nationality is required' });
     if (!role_id || typeof role_id !== 'string') return res.status(400).json({ error: 'Role is required' });
     if (!role_title || typeof role_title !== 'string') return res.status(400).json({ error: 'Role title is required' });
