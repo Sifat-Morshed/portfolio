@@ -130,45 +130,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const sc = statusColors[status] || '#06b6d4';
         const sl = statusLabels[status] || status;
 
+        // Gmail dark mode fix: wrap in full HTML doc with color-scheme meta + bgcolor attrs
+        const emailHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only"><style>:root{color-scheme:light only;}body,table,td{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}u+.body .gm{display:block!important;}</style></head><body style="margin:0;padding:0;background-color:#050505;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#050505" style="background-color:#050505;"><tr><td align="center" style="padding:20px 0;">
+            <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#050505" style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;background-color:#050505;border:1px solid #111113;border-radius:12px;overflow:hidden;">
+              <tr><td bgcolor="#0A0A0B" style="background-color:#0A0A0B;border-bottom:2px solid ${sc};padding:28px 32px;text-align:center;">
+                <p style="margin:0 0 4px;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:2px;">Application Update</p>
+                <h1 style="margin:0;color:${sc};font-size:24px;font-weight:700;">${sl}</h1>
+                <p style="margin:8px 0 0;color:#64748b;font-size:13px;">${app.role_title}</p>
+              </td></tr>
+              <tr><td bgcolor="#050505" style="background-color:#050505;padding:28px 32px;">
+                <p style="color:#94a3b8;font-size:14px;line-height:1.7;margin:0 0 20px;">Hi <strong style="color:#e2e8f0;">${app.full_name}</strong>,</p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#0A0A0B" style="background-color:#0A0A0B;border:1px solid #1e293b;border-left:3px solid ${sc};padding:16px 20px;border-radius:0 8px 8px 0;">
+                  <p style="margin:0;color:#cbd5e1;font-size:14px;line-height:1.7;">${stageDescriptions[status] || ''}</p>
+                </td></tr></table>
+                ${nextSteps[status] ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;"><tr><td>
+                  <p style="color:#e2e8f0;font-size:14px;font-weight:600;margin:0 0 10px;">What happens next</p>
+                  <ul style="list-style:none;padding:0;margin:0;">${nextSteps[status]}</ul>
+                </td></tr></table>` : ''}
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;"><tr><td bgcolor="#0A0A0B" style="background-color:#0A0A0B;border:1px solid #1e293b;border-radius:8px;padding:14px 16px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:13px;">
+                    <tr><td style="color:#64748b;padding:4px 0;">App ID</td><td style="color:#06b6d4;font-family:monospace;padding:4px 0;text-align:right;">${app_id}</td></tr>
+                    <tr><td style="color:#64748b;padding:4px 0;">Role</td><td style="color:#e2e8f0;padding:4px 0;text-align:right;">${app.role_title}</td></tr>
+                    <tr><td style="color:#64748b;padding:4px 0;">Applied</td><td style="color:#e2e8f0;padding:4px 0;text-align:right;">${new Date(app.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td></tr>
+                  </table>
+                </td></tr></table>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;"><tr><td align="center">
+                  <a href="${siteUrl}/work/status?id=${app_id}" style="display:inline-block;background-color:${sc};color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Track Your Status</a>
+                </td></tr></table>
+              </td></tr>
+              <tr><td bgcolor="#0A0A0B" style="background-color:#0A0A0B;border-top:1px solid #1e293b;padding:16px 32px;text-align:center;">
+                <p style="color:#475569;font-size:11px;margin:0;">Sifat Morshed &middot; <a href="${siteUrl}" style="color:#06b6d4;text-decoration:none;">sifat-there.vercel.app</a></p>
+              </td></tr>
+            </table>
+        </td></tr></table></body></html>`;
+
         await transporter.sendMail({
           from: `"Sifat Morshed" <${process.env.EMAIL_SERVER_USER}>`,
           replyTo: process.env.EMAIL_SERVER_USER,
           to: app.email,
           subject: `Application Update - ${sl}`,
           headers: { 'X-Mailer': 'SifatPortfolio/1.0', 'Precedence': 'bulk' },
-          html: `
-            <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;background:#050505;border:1px solid #111113;border-radius:12px;overflow:hidden;">
-              <div style="background:#0A0A0B;border-bottom:2px solid ${sc};padding:28px 32px;text-align:center;">
-                <p style="margin:0 0 4px;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:2px;">Application Update</p>
-                <h1 style="margin:0;color:${sc};font-size:24px;font-weight:700;">${sl}</h1>
-                <p style="margin:8px 0 0;color:#64748b;font-size:13px;">${app.role_title}</p>
-              </div>
-              <div style="padding:28px 32px;background:#050505;">
-                <p style="color:#94a3b8;font-size:14px;line-height:1.7;margin:0 0 20px;">Hi <strong style="color:#e2e8f0;">${app.full_name}</strong>,</p>
-                <div style="background:#0A0A0B;border:1px solid #1e293b;border-left:3px solid ${sc};padding:16px 20px;margin:0 0 24px;border-radius:0 8px 8px 0;">
-                  <p style="margin:0;color:#cbd5e1;font-size:14px;line-height:1.7;">${stageDescriptions[status] || ''}</p>
-                </div>
-                ${nextSteps[status] ? `
-                <div style="margin:0 0 24px;">
-                  <p style="color:#e2e8f0;font-size:14px;font-weight:600;margin:0 0 10px;">What happens next</p>
-                  <ul style="list-style:none;padding:0;margin:0;">${nextSteps[status]}</ul>
-                </div>` : ''}
-                <div style="background:#0A0A0B;border:1px solid #1e293b;border-radius:8px;padding:14px 16px;margin:0 0 24px;">
-                  <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                    <tr><td style="color:#64748b;padding:4px 0;">App ID</td><td style="color:#06b6d4;font-family:monospace;padding:4px 0;text-align:right;">${app_id}</td></tr>
-                    <tr><td style="color:#64748b;padding:4px 0;">Role</td><td style="color:#e2e8f0;padding:4px 0;text-align:right;">${app.role_title}</td></tr>
-                    <tr><td style="color:#64748b;padding:4px 0;">Applied</td><td style="color:#e2e8f0;padding:4px 0;text-align:right;">${new Date(app.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td></tr>
-                  </table>
-                </div>
-                <div style="text-align:center;margin:0 0 24px;">
-                  <a href="${siteUrl}/work/status?id=${app_id}" style="display:inline-block;background:${sc};color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Track Your Status</a>
-                </div>
-              </div>
-              <div style="background:#0A0A0B;border-top:1px solid #1e293b;padding:16px 32px;text-align:center;">
-                <p style="color:#475569;font-size:11px;margin:0;">Sifat Morshed &middot; <a href="${siteUrl}" style="color:#06b6d4;text-decoration:none;">sifat-there.vercel.app</a></p>
-              </div>
-            </div>
-          `,
+          html: emailHtml,
         });
         trackEmailSent();
       } catch (emailErr) {

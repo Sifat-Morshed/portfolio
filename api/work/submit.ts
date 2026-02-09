@@ -190,8 +190,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const existingApp = await sheets.getApplicationByEmail(sanitized.email);
     if (existingApp) {
       return res.status(409).json({
-        error: 'An application with this email already exists.',
+        error: 'duplicate',
         existing_id: existingApp.app_id,
+        existing_name: existingApp.full_name,
+        existing_role: existingApp.role_title,
+        existing_date: existingApp.timestamp,
       });
     }
 
@@ -282,7 +285,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // Fire both emails in PARALLEL for speed
           const emailJobs: Promise<unknown>[] = [];
 
-          // 1. Confirmation email to applicant
+          // 1. Confirmation email to applicant (Gmail dark mode safe)
           emailJobs.push(
             transporter.sendMail({
               from: `"Sifat Morshed" <${process.env.EMAIL_SERVER_USER}>`,
@@ -293,28 +296,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 'X-Mailer': 'SifatPortfolio/1.0',
                 'Precedence': 'bulk',
               },
-              html: `
-                <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;background:#050505;border:1px solid #111113;border-radius:12px;overflow:hidden;">
-                  <div style="background:#0A0A0B;border-bottom:2px solid #06b6d4;padding:28px 32px;text-align:center;">
+              html: `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only"><style>:root{color-scheme:light only;}</style></head><body style="margin:0;padding:0;background-color:#050505;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#050505" style="background-color:#050505;"><tr><td align="center" style="padding:20px 0;">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#050505" style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;background-color:#050505;border:1px solid #111113;border-radius:12px;overflow:hidden;">
+                  <tr><td bgcolor="#0A0A0B" style="background-color:#0A0A0B;border-bottom:2px solid #06b6d4;padding:28px 32px;text-align:center;">
                     <p style="margin:0 0 4px;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:2px;">New Application</p>
                     <h1 style="margin:0;color:#06b6d4;font-size:22px;font-weight:700;">Application Received</h1>
-                  </div>
-                  <div style="padding:28px 32px;background:#050505;">
+                  </td></tr>
+                  <tr><td bgcolor="#050505" style="background-color:#050505;padding:28px 32px;">
                     <p style="color:#94a3b8;font-size:14px;line-height:1.7;margin:0 0 16px;">Hi <strong style="color:#e2e8f0;">${sanitized.full_name}</strong>,</p>
                     <p style="color:#94a3b8;font-size:14px;line-height:1.7;margin:0 0 20px;">Your application for <strong style="color:#06b6d4;">${sanitized.role_title}</strong> has been received and is under review.</p>
-                    <div style="background:#0A0A0B;border:1px solid #1e293b;border-radius:8px;padding:16px;margin:0 0 20px;text-align:center;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#0A0A0B" style="background-color:#0A0A0B;border:1px solid #1e293b;border-radius:8px;padding:16px;text-align:center;">
                       <p style="margin:0 0 4px;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Your Application ID</p>
                       <p style="margin:0;font-family:monospace;font-size:20px;color:#06b6d4;font-weight:700;">${appId}</p>
-                    </div>
-                    <div style="text-align:center;margin:0 0 20px;">
-                      <a href="${siteUrl}/work/status?id=${appId}" style="display:inline-block;background:#06b6d4;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Track Your Status</a>
-                    </div>
-                  </div>
-                  <div style="background:#0A0A0B;border-top:1px solid #1e293b;padding:16px 32px;text-align:center;">
+                    </td></tr></table>
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;"><tr><td align="center">
+                      <a href="${siteUrl}/work/status?id=${appId}" style="display:inline-block;background-color:#06b6d4;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Track Your Status</a>
+                    </td></tr></table>
+                  </td></tr>
+                  <tr><td bgcolor="#0A0A0B" style="background-color:#0A0A0B;border-top:1px solid #1e293b;padding:16px 32px;text-align:center;">
                     <p style="color:#475569;font-size:11px;margin:0;">Sifat Morshed &middot; <a href="${siteUrl}" style="color:#06b6d4;text-decoration:none;">sifat-there.vercel.app</a></p>
-                  </div>
-                </div>
-              `,
+                  </td></tr>
+                </table>
+              </td></tr></table></body></html>`,
             })
           );
 
@@ -330,14 +333,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 to: adminNotifyEmail,
                 subject: `New Application: ${sanitized.full_name} - ${sanitized.role_title}`,
                 attachments,
-                html: `
-                  <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;background:#050505;border:1px solid #111113;border-radius:12px;overflow:hidden;">
-                    <div style="background:#0A0A0B;border-bottom:2px solid #f59e0b;padding:24px 32px;text-align:center;">
+                html: `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only"><style>:root{color-scheme:light only;}</style></head><body style="margin:0;padding:0;background-color:#050505;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#050505" style="background-color:#050505;"><tr><td align="center" style="padding:20px 0;">
+                  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#050505" style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;background-color:#050505;border:1px solid #111113;border-radius:12px;overflow:hidden;">
+                    <tr><td bgcolor="#0A0A0B" style="background-color:#0A0A0B;border-bottom:2px solid #f59e0b;padding:24px 32px;text-align:center;">
                       <p style="margin:0 0 4px;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:2px;">Admin Alert</p>
                       <h2 style="margin:0;color:#f59e0b;font-size:18px;font-weight:700;">New Application Received</h2>
-                    </div>
-                    <div style="padding:24px 32px;background:#050505;">
-                      <table style="width:100%;border-collapse:collapse;">
+                    </td></tr>
+                    <tr><td bgcolor="#050505" style="background-color:#050505;padding:24px 32px;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                         <tr><td style="color:#64748b;padding:6px 0;font-size:13px;">Name</td><td style="color:#e2e8f0;padding:6px 0;font-weight:600;">${sanitized.full_name}</td></tr>
                         <tr><td style="color:#64748b;padding:6px 0;font-size:13px;">Email</td><td style="color:#06b6d4;padding:6px 0;">${sanitized.email}</td></tr>
                         <tr><td style="color:#64748b;padding:6px 0;font-size:13px;">Phone</td><td style="color:#e2e8f0;padding:6px 0;">${sanitized.phone}</td></tr>
@@ -349,15 +352,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         <tr><td style="color:#64748b;padding:6px 0;font-size:13px;">Audio</td><td style="color:#e2e8f0;padding:6px 0;">${audioAttachment ? 'Attached' : 'None'}</td></tr>
                       </table>
                       ${(cvAttachment || audioAttachment) ? '<p style="color:#10b981;margin-top:16px;font-size:13px;">Files are attached to this email.</p>' : ''}
-                      <div style="margin-top:20px;text-align:center;">
-                        <a href="${siteUrl}/work/admin" style="display:inline-block;background:#06b6d4;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Open Admin Dashboard</a>
-                      </div>
-                    </div>
-                    <div style="background:#0A0A0B;border-top:1px solid #1e293b;padding:12px 32px;text-align:center;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;"><tr><td align="center">
+                        <a href="${siteUrl}/work/admin" style="display:inline-block;background-color:#06b6d4;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Open Admin Dashboard</a>
+                      </td></tr></table>
+                    </td></tr>
+                    <tr><td bgcolor="#0A0A0B" style="background-color:#0A0A0B;border-top:1px solid #1e293b;padding:12px 32px;text-align:center;">
                       <p style="color:#475569;font-size:11px;margin:0;">Work With Me Bot</p>
-                    </div>
-                  </div>
-                `,
+                    </td></tr>
+                  </table>
+                </td></tr></table></body></html>`,
               })
             );
           }

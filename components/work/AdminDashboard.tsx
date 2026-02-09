@@ -327,6 +327,7 @@ const AdminDashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
+          <SelfDestructButton userEmail={user?.email || ''} />
           {import.meta.env.VITE_GOOGLE_SHEET_URL && (
             <a
               href={import.meta.env.VITE_GOOGLE_SHEET_URL}
@@ -410,9 +411,6 @@ const AdminDashboard: React.FC = () => {
 
         {/* Manual Email Sender */}
         <ManualEmailSender userEmail={user?.email || ''} />
-
-        {/* Self-Destruct */}
-        <SelfDestructSection userEmail={user?.email || ''} />
         </>
       )}
     </div>
@@ -490,24 +488,81 @@ const ManualEmailSender: React.FC<{ userEmail: string }> = ({ userEmail }) => {
   );
 };
 
-// ─── Self-Destruct ─────────────────────────────────────────────────────────────
-const SelfDestructSection: React.FC<{ userEmail: string }> = ({ userEmail }) => {
-  const [stage, setStage] = useState(0); // 0=hidden, 1-3=confirms, 4=password, 5=final question
+// ─── Self-Destruct (top-right button + modal overlay) ─────────────────────────
+const LOCKOUT_KEY = 'sd_lockout';
+const FAILS_KEY = 'sd_fails';
+const LOCKOUT_MS = 30 * 60 * 1000; // 30 minutes
+const MAX_FAILS = 3;
+
+function getLockoutEnd(): number {
+  try { return parseInt(localStorage.getItem(LOCKOUT_KEY) || '0', 10); } catch { return 0; }
+}
+function getFailCount(): number {
+  try { return parseInt(localStorage.getItem(FAILS_KEY) || '0', 10); } catch { return 0; }
+}
+
+const SelfDestructButton: React.FC<{ userEmail: string }> = ({ userEmail }) => {
+  const [open, setOpen] = useState(false);
+  const [stage, setStage] = useState(0); // 0=closed, 1-3=confirms, 4=password, 5=final
   const [password, setPassword] = useState('');
   const [finalAnswer, setFinalAnswer] = useState('');
   const [destroying, setDestroying] = useState(false);
   const [destroyed, setDestroyed] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [fails, setFails] = useState(getFailCount());
+  const [locked, setLocked] = useState(Date.now() < getLockoutEnd());
+  const [lockRemaining, setLockRemaining] = useState('');
+
+  // Lockout countdown timer
+  useEffect(() => {
+    if (!locked) return;
+    const iv = setInterval(() => {
+      const end = getLockoutEnd();
+      const remaining = end - Date.now();
+      if (remaining <= 0) {
+        setLocked(false);
+        setLockRemaining('');
+        localStorage.removeItem(LOCKOUT_KEY);
+        localStorage.removeItem(FAILS_KEY);
+        setFails(0);
+        clearInterval(iv);
+      } else {
+        const mins = Math.floor(remaining / 60000);
+        const secs = Math.floor((remaining % 60000) / 1000);
+        setLockRemaining(`${mins}m ${secs}s`);
+      }
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [locked]);
+
+  const reset = () => { setStage(0); setOpen(false); setPassword(''); setFinalAnswer(''); setError(''); };
+
+  const recordFail = () => {
+    const newFails = fails + 1;
+    setFails(newFails);
+    localStorage.setItem(FAILS_KEY, String(newFails));
+    if (newFails >= MAX_FAILS) {
+      const lockEnd = Date.now() + LOCKOUT_MS;
+      localStorage.setItem(LOCKOUT_KEY, String(lockEnd));
+      setLocked(true);
+      reset();
+    }
+  };
+
+  const handleOpen = () => {
+    if (Date.now() < getLockoutEnd()) { setLocked(true); return; }
+    setOpen(true); setStage(1); setError('');
+  };
 
   const confirmMessages = [
-    'Are you sure you want to activate self-destruct? This will permanently delete ALL data.',
-    'This action is IRREVERSIBLE. All applications, files, and records will be gone forever.',
-    'Final warning: There is NO undo. Everything will be destroyed. Continue?',
+    'Are you sure you want to activate self-destruct? This will permanently delete ALL data and the entire website.',
+    'This action is IRREVERSIBLE. All applications, code, files, and records will be destroyed forever.',
+    'Final warning: There is absolutely NO undo. The entire site will cease to exist. Continue?',
   ];
 
   const handleConfirm = () => {
     if (stage < 3) { setStage(stage + 1); setError(''); }
-    else if (stage === 3) { setStage(4); setError(''); }
+    else { setStage(4); setError(''); }
   };
 
   const handlePasswordSubmit = () => {
@@ -525,96 +580,133 @@ const SelfDestructSection: React.FC<{ userEmail: string }> = ({ userEmail }) => 
         body: JSON.stringify({ password, final_answer: finalAnswer }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || 'Self-destruct failed'); setDestroying(false); return; }
+      if (!res.ok) {
+        // Wrong password or wrong answer — push back to stage 1 + record fail
+        recordFail();
+        setPassword(''); setFinalAnswer('');
+        setStage(locked ? 0 : 1);
+        setError(data.error || 'Verification failed. Starting over.');
+        setDestroying(false);
+        return;
+      }
+      // Clear fail tracking on success
+      localStorage.removeItem(FAILS_KEY);
+      localStorage.removeItem(LOCKOUT_KEY);
       setDestroyed(data.timestamp);
     } catch {
-      setError('Self-destruct request failed'); setDestroying(false);
+      recordFail();
+      setPassword(''); setFinalAnswer('');
+      setStage(locked ? 0 : 1);
+      setError('Request failed. Starting over.');
+      setDestroying(false);
     }
   };
 
+  // After destruction — fullscreen dark page
   if (destroyed) {
     return (
-      <div className="mt-8 bg-red-500/5 border border-red-500/20 rounded-xl p-12 text-center">
-        <Skull size={48} className="text-red-500 mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-red-400 mb-2">All Data Destroyed</h3>
-        <p className="text-sm text-slate-500">Destruction completed at {new Date(destroyed).toLocaleString()}</p>
-        <p className="text-xs text-slate-600 mt-2">There is nothing left.</p>
+      <div className="fixed inset-0 z-[999] bg-[#050505] flex items-center justify-center">
+        <div className="text-center px-6">
+          <Skull size={64} className="text-red-600 mx-auto mb-6 animate-pulse" />
+          <h1 className="text-3xl font-bold text-red-500 mb-3">This Site Has Been Permanently Shut Down</h1>
+          <p className="text-slate-500 text-sm mb-2">All code, data, files, and the entire website have been irreversibly destroyed.</p>
+          <p className="text-slate-500 text-xs mb-1">The GitHub repository now contains only a termination page.</p>
+          <p className="text-slate-600 text-xs">Terminated at {new Date(destroyed).toLocaleString()}</p>
+          <div className="mt-8 border-t border-white/5 pt-6">
+            <p className="text-slate-700 text-xs">There is nothing left.</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mt-8 bg-white/[0.01] border border-red-500/10 rounded-xl p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <AlertTriangle size={16} className="text-red-400/60" />
-          <h3 className="text-sm font-medium text-red-400/60">Danger Zone</h3>
-        </div>
-        {stage === 0 && (
-          <button
-            onClick={() => setStage(1)}
-            className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-xs font-medium hover:bg-red-500/20 transition-colors"
-          >
-            Self-Destruct
-          </button>
-        )}
-      </div>
+    <>
+      {/* Small red button in top corner */}
+      <button
+        onClick={handleOpen}
+        disabled={locked}
+        className="flex items-center gap-1.5 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        title={locked ? `Locked for ${lockRemaining}` : 'Self-Destruct'}
+      >
+        <Skull size={13} />
+        {locked ? lockRemaining : ''}
+      </button>
 
-      {stage >= 1 && stage <= 3 && (
-        <div className="mt-4 p-4 bg-red-500/5 border border-red-500/20 rounded-lg">
-          <p className="text-sm text-red-300 mb-3">{confirmMessages[stage - 1]}</p>
-          <div className="flex gap-2">
-            <button onClick={handleConfirm} className="px-4 py-1.5 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg text-xs font-medium hover:bg-red-500/30 transition-colors">
-              Yes, Continue ({stage}/5)
-            </button>
-            <button onClick={() => { setStage(0); setPassword(''); setFinalAnswer(''); setError(''); }} className="px-4 py-1.5 bg-white/5 border border-white/10 text-slate-400 rounded-lg text-xs font-medium hover:bg-white/10 transition-colors">
-              Cancel
-            </button>
+      {/* Modal overlay */}
+      {open && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={reset} />
+          <div className="relative bg-[#0A0A0B] border border-red-500/20 rounded-2xl w-full max-w-md p-6 shadow-2xl shadow-red-500/5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle size={18} className="text-red-400" />
+              <h3 className="text-lg font-bold text-red-400">Self-Destruct Sequence</h3>
+            </div>
+
+            {fails > 0 && fails < MAX_FAILS && (
+              <p className="text-[11px] text-yellow-400 mb-3">Warning: {MAX_FAILS - fails} attempt(s) remaining before 30-minute lockout</p>
+            )}
+
+            {stage >= 1 && stage <= 3 && (
+              <div>
+                <p className="text-sm text-red-300 mb-4">{confirmMessages[stage - 1]}</p>
+                <div className="flex gap-2">
+                  <button onClick={handleConfirm} className="flex-1 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg text-xs font-medium hover:bg-red-500/30 transition-colors">
+                    Yes, Continue ({stage}/5)
+                  </button>
+                  <button onClick={reset} className="flex-1 py-2 bg-white/5 border border-white/10 text-slate-400 rounded-lg text-xs font-medium hover:bg-white/10 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {stage === 4 && (
+              <div>
+                <p className="text-sm text-red-300 mb-1">Enter the self-destruct password</p>
+                <p className="text-xs text-slate-600 mb-3">Hint: "Money is?"</p>
+                <input
+                  type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+                  placeholder="Password..." autoFocus
+                  className="w-full px-3 py-2 bg-[#050505] border border-red-500/20 rounded-lg text-sm text-white focus:border-red-400 focus:outline-none mb-3"
+                />
+                <div className="flex gap-2">
+                  <button onClick={handlePasswordSubmit} className="flex-1 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg text-xs font-medium hover:bg-red-500/30 transition-colors">
+                    Continue (4/5)
+                  </button>
+                  <button onClick={reset} className="flex-1 py-2 bg-white/5 border border-white/10 text-slate-400 rounded-lg text-xs font-medium hover:bg-white/10 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {stage === 5 && (
+              <div>
+                <p className="text-sm text-red-300 mb-1">Final question: Who is the love of your life?</p>
+                <input
+                  type="text" value={finalAnswer} onChange={(e) => setFinalAnswer(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleFinalSubmit()}
+                  placeholder="Your answer..." autoFocus
+                  className="w-full px-3 py-2 bg-[#050505] border border-red-500/20 rounded-lg text-sm text-white focus:border-red-400 focus:outline-none mb-3"
+                />
+                <div className="flex gap-2">
+                  <button onClick={handleFinalSubmit} disabled={destroying} className="flex-1 py-2 bg-red-600/30 border border-red-500/40 text-red-300 rounded-lg text-xs font-bold hover:bg-red-600/50 transition-colors disabled:opacity-50">
+                    {destroying ? 'Destroying...' : 'DESTROY EVERYTHING (5/5)'}
+                  </button>
+                  <button onClick={reset} className="flex-1 py-2 bg-white/5 border border-white/10 text-slate-400 rounded-lg text-xs font-medium hover:bg-white/10 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {error && <p className="text-xs text-red-400 mt-3">{error}</p>}
           </div>
         </div>
       )}
-
-      {stage === 4 && (
-        <div className="mt-4 p-4 bg-red-500/5 border border-red-500/20 rounded-lg">
-          <p className="text-sm text-red-300 mb-1">Enter the self-destruct password</p>
-          <p className="text-xs text-slate-600 mb-3">Hint: "Money is?"</p>
-          <input
-            type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password..."
-            className="w-full px-3 py-2 bg-[#0A0A0B] border border-red-500/20 rounded-lg text-sm text-white focus:border-red-400 focus:outline-none mb-2"
-          />
-          <div className="flex gap-2">
-            <button onClick={handlePasswordSubmit} className="px-4 py-1.5 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg text-xs font-medium hover:bg-red-500/30 transition-colors">
-              Continue (4/5)
-            </button>
-            <button onClick={() => { setStage(0); setPassword(''); setFinalAnswer(''); setError(''); }} className="px-4 py-1.5 bg-white/5 border border-white/10 text-slate-400 rounded-lg text-xs font-medium hover:bg-white/10 transition-colors">
-              Cancel
-            </button>
-          </div>
-          {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
-        </div>
-      )}
-
-      {stage === 5 && (
-        <div className="mt-4 p-4 bg-red-500/5 border border-red-500/20 rounded-lg">
-          <p className="text-sm text-red-300 mb-1">Final question: Who is the love of your life?</p>
-          <input
-            type="text" value={finalAnswer} onChange={(e) => setFinalAnswer(e.target.value)}
-            placeholder="Your answer..."
-            className="w-full px-3 py-2 bg-[#0A0A0B] border border-red-500/20 rounded-lg text-sm text-white focus:border-red-400 focus:outline-none mb-2"
-          />
-          <div className="flex gap-2">
-            <button onClick={handleFinalSubmit} disabled={destroying} className="px-4 py-1.5 bg-red-600/30 border border-red-500/40 text-red-300 rounded-lg text-xs font-bold hover:bg-red-600/50 transition-colors disabled:opacity-50">
-              {destroying ? 'Destroying...' : 'DESTROY EVERYTHING (5/5)'}
-            </button>
-            <button onClick={() => { setStage(0); setPassword(''); setFinalAnswer(''); setError(''); }} className="px-4 py-1.5 bg-white/5 border border-white/10 text-slate-400 rounded-lg text-xs font-medium hover:bg-white/10 transition-colors">
-              Cancel
-            </button>
-          </div>
-          {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
-        </div>
-      )}
-    </div>
+    </>
   );
 };
 

@@ -38,6 +38,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [appId, setAppId] = useState('');
+  const [duplicateInfo, setDuplicateInfo] = useState<{ id: string; name: string; role: string; date: string } | null>(null);
   const [error, setError] = useState('');
 
   const { devMode, devSignIn, isGsiLoaded } = useAuth();
@@ -132,12 +133,23 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
         body: formData,
       });
 
+      const data = await res.json();
+
+      if (res.status === 409 && data.error === 'duplicate') {
+        setDuplicateInfo({
+          id: data.existing_id,
+          name: data.existing_name,
+          role: data.existing_role,
+          date: data.existing_date,
+        });
+        setStep('success'); // reuse success step slot for the duplicate UI
+        return;
+      }
+
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || 'Submission failed');
       }
 
-      const data = await res.json();
       setAppId(data.app_id);
       setStep('success');
     } catch (err: unknown) {
@@ -455,8 +467,8 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
             </>
           )}
 
-          {/* Step: Success */}
-          {step === 'success' && (
+          {/* Step: Success or Duplicate */}
+          {step === 'success' && !duplicateInfo && (
             <div className="text-center py-6">
               <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4">
                 <CheckCircle size={32} className="text-emerald-400" />
@@ -476,6 +488,55 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
               >
                 Done
               </button>
+            </div>
+          )}
+
+          {step === 'success' && duplicateInfo && (
+            <div className="text-center py-6">
+              <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle size={32} className="text-amber-400" />
+              </div>
+              <h3 className="text-xl font-display font-bold text-white mb-2">You've Already Applied</h3>
+              <p className="text-slate-300 mb-4 text-sm leading-relaxed">
+                It looks like you already submitted an application using this email address. We have your details on file and your application is being reviewed.
+              </p>
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 mb-4 text-left space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Application ID</span>
+                  <span className="font-mono text-primary font-bold">{duplicateInfo.id}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Role</span>
+                  <span className="text-white">{duplicateInfo.role}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Applied On</span>
+                  <span className="text-white">{new Date(duplicateInfo.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                </div>
+              </div>
+              <p className="text-sm text-slate-400 mb-2">
+                Need to update your application or have questions?
+              </p>
+              <a
+                href="mailto:sifat.morshed.dev@gmail.com?subject=Application Update Request - ${duplicateInfo.id}"
+                className="inline-flex items-center gap-2 text-primary hover:text-primaryGlow text-sm font-medium transition-colors mb-6"
+              >
+                Reach out to sifat.morshed.dev@gmail.com
+              </a>
+              <div className="flex gap-3 mt-2">
+                <a
+                  href={`/work/status?id=${duplicateInfo.id}`}
+                  className="flex-1 py-2.5 bg-primary/10 border border-primary/20 text-primary rounded-lg font-medium text-sm text-center hover:bg-primary/20 transition-colors"
+                >
+                  Track Your Status
+                </a>
+                <button
+                  onClick={handleClose}
+                  className="flex-1 py-2.5 bg-white/5 border border-white/10 text-white rounded-lg font-medium text-sm hover:bg-white/10 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           )}
         </div>
