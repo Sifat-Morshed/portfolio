@@ -62,7 +62,7 @@ const CallSimulator: React.FC = () => {
         <div className="max-w-4xl mx-auto mt-8 md:mt-12">
           
           {/* Mobile: Horizontal Scroll Chips */}
-          <div className="flex overflow-x-auto pb-4 gap-2 no-scrollbar mb-6 snap-x">{
+          <div className="flex overflow-x-auto pb-4 gap-2 no-scrollbar mb-6 snap-x">
             {scenarios.map((s) => (
               <button
                 key={s.id}

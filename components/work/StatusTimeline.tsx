@@ -19,7 +19,7 @@ const STATUS_DESCRIPTIONS: Record<ApplicationStatus, string> = {
   NEW: 'Your application is being carefully reviewed. We evaluate your audio, CV, and profile to find the best fit.',
   AUDIO_PASS: 'Your audio recording stood out! You\'re moving to the next stage.',
   INTERVIEW: 'You\'ve been shortlisted for an interview — check your email for scheduling details.',
-  HIRED: 'Welcome aboard! 🎉 Onboarding details are on the way.',
+  HIRED: 'Welcome aboard! Onboarding details are on the way.',
   REJECTED: 'We\'ve decided not to move forward this time. You\'re welcome to re-apply in the future.',
 };
 

@@ -1,10 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronDown, ChevronUp, Search, Download, ExternalLink, Play, Filter, FileDown, Phone, Mail, Globe, User } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, Download, ExternalLink, Play, Filter, FileDown, Phone, Mail, Globe, User, Trash2, Lock } from 'lucide-react';
 import type { ApplicationRow, ApplicationStatus } from '../../src/lib/work/types';
+import { STATUS_RANK } from '../../src/lib/work/types';
 
 interface AdminTableProps {
   applications: ApplicationRow[];
   onStatusChange: (appId: string, status: ApplicationStatus, notes?: string) => void;
+  onDelete: (appId: string) => void;
   onExport: () => void;
 }
 
@@ -42,7 +44,29 @@ const QUICK_FILTERS = [
 type SortField = 'timestamp' | 'full_name' | 'status' | 'role_id';
 type SortDir = 'asc' | 'desc';
 
-const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, onExport }) => {
+const REJECTION_LOCK_MS = 30 * 60 * 1000; // 30 minutes
+
+function isStatusLocked(app: ApplicationRow): boolean {
+  if (app.status === 'HIRED') return true;
+  if (app.status === 'REJECTED') {
+    const elapsed = Date.now() - new Date(app.last_updated).getTime();
+    return elapsed > REJECTION_LOCK_MS;
+  }
+  return false;
+}
+
+function getRejectionGraceRemaining(app: ApplicationRow): number {
+  if (app.status !== 'REJECTED') return 0;
+  const elapsed = Date.now() - new Date(app.last_updated).getTime();
+  return Math.max(0, REJECTION_LOCK_MS - elapsed);
+}
+
+function getAllowedStatuses(currentStatus: ApplicationStatus): ApplicationStatus[] {
+  const currentRank = STATUS_RANK[currentStatus];
+  return STATUS_OPTIONS.filter((s) => STATUS_RANK[s] >= currentRank);
+}
+
+const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, onDelete, onExport }) => {
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -50,6 +74,7 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editNotes, setEditNotes] = useState<Record<string, string>>({});
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     let data = [...applications];
@@ -284,17 +309,36 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                           <div className="space-y-3">
                             <div>
                               <label className="block text-xs text-slate-600 mb-1">Update Status</label>
-                              <select
-                                value={app.status}
-                                onChange={(e) => handleStatusSelect(app.app_id, e.target.value as ApplicationStatus)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-full px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-primary focus:outline-none appearance-none cursor-pointer"
-                              >
-                                {STATUS_OPTIONS.map((s) => (
-                                  <option key={s} value={s} className="bg-[#0A0A0B] text-white">{STATUS_LABELS[s]}</option>
-                                ))}
-                              </select>
+                              {isStatusLocked(app) ? (
+                                <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400">
+                                  <Lock size={14} /> Status Locked ({STATUS_LABELS[app.status]})
+                                </div>
+                              ) : (
+                                <>
+                                  <select
+                                    value={app.status}
+                                    onChange={(e) => handleStatusSelect(app.app_id, e.target.value as ApplicationStatus)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-full px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-primary focus:outline-none appearance-none cursor-pointer"
+                                  >
+                                    {getAllowedStatuses(app.status).map((s) => (
+                                      <option key={s} value={s} className="bg-[#0A0A0B] text-white">{STATUS_LABELS[s]}</option>
+                                    ))}
+                                  </select>
+                                  {app.status === 'REJECTED' && getRejectionGraceRemaining(app) > 0 && (
+                                    <p className="text-[10px] text-yellow-400 mt-1">
+                                      Grace window: {Math.ceil(getRejectionGraceRemaining(app) / 60000)}m remaining
+                                    </p>
+                                  )}
+                                </>
+                              )}
                             </div>
+                            {app.status === 'HIRED' && app.started_date && (
+                              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5">
+                                <p className="text-[10px] text-emerald-400 uppercase tracking-wider">Started Working</p>
+                                <p className="text-xs text-white mt-0.5">{new Date(app.started_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                              </div>
+                            )}
                             <div>
                               <label className="block text-xs text-slate-600 mb-1">Notes</label>
                               <textarea
@@ -318,6 +362,32 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                                   className="mt-2 px-3 py-1.5 bg-primary/10 border border-primary/20 text-primary rounded-lg text-xs font-medium hover:bg-primary/20 transition-colors"
                                 >
                                   Save Notes
+                                </button>
+                              )}
+                            </div>
+                            {/* Delete Button */}
+                            <div className="pt-2 border-t border-white/5">
+                              {confirmDeleteId === app.app_id ? (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); onDelete(app.app_id); setConfirmDeleteId(null); }}
+                                    className="flex-1 py-1.5 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg text-xs font-medium hover:bg-red-500/30 transition-colors"
+                                  >
+                                    Confirm Delete
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                                    className="flex-1 py-1.5 bg-white/5 border border-white/10 text-slate-400 rounded-lg text-xs font-medium hover:bg-white/10 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(app.app_id); }}
+                                  className="flex items-center gap-1.5 text-xs text-red-400/60 hover:text-red-400 transition-colors"
+                                >
+                                  <Trash2 size={12} /> Delete Entry
                                 </button>
                               )}
                             </div>
@@ -402,7 +472,7 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-slate-600 uppercase tracking-wider">Compliance</span>
                         <span className={`text-xs ${app.blacklist_acknowledged === 'true' ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {app.blacklist_acknowledged === 'true' ? '✓ Acknowledged' : '✗ Not acknowledged'}
+                          {app.blacklist_acknowledged === 'true' ? 'Acknowledged' : 'Not acknowledged'}
                         </span>
                       </div>
                     </div>
@@ -447,16 +517,35 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                     {/* Status Update */}
                     <div className="space-y-2">
                       <label className="block text-[10px] text-slate-600 uppercase tracking-wider">Update Status</label>
-                      <select
-                        value={app.status}
-                        onChange={(e) => handleStatusSelect(app.app_id, e.target.value as ApplicationStatus)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-full px-3 py-2.5 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-primary focus:outline-none appearance-none cursor-pointer"
-                      >
-                        {STATUS_OPTIONS.map((s) => (
-                          <option key={s} value={s} className="bg-[#0A0A0B] text-white">{STATUS_LABELS[s]}</option>
-                        ))}
-                      </select>
+                      {isStatusLocked(app) ? (
+                        <div className="flex items-center gap-2 px-3 py-2.5 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400">
+                          <Lock size={14} /> Status Locked ({STATUS_LABELS[app.status]})
+                        </div>
+                      ) : (
+                        <>
+                          <select
+                            value={app.status}
+                            onChange={(e) => handleStatusSelect(app.app_id, e.target.value as ApplicationStatus)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full px-3 py-2.5 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-primary focus:outline-none appearance-none cursor-pointer"
+                          >
+                            {getAllowedStatuses(app.status).map((s) => (
+                              <option key={s} value={s} className="bg-[#0A0A0B] text-white">{STATUS_LABELS[s]}</option>
+                            ))}
+                          </select>
+                          {app.status === 'REJECTED' && getRejectionGraceRemaining(app) > 0 && (
+                            <p className="text-[10px] text-yellow-400 mt-1">
+                              Grace window: {Math.ceil(getRejectionGraceRemaining(app) / 60000)}m remaining
+                            </p>
+                          )}
+                        </>
+                      )}
+                      {app.status === 'HIRED' && app.started_date && (
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5 mt-2">
+                          <p className="text-[10px] text-emerald-400 uppercase tracking-wider">Started Working</p>
+                          <p className="text-xs text-white mt-0.5">{new Date(app.started_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Notes */}
@@ -483,6 +572,33 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                           className="w-full py-2 bg-primary/10 border border-primary/20 text-primary rounded-lg text-xs font-medium hover:bg-primary/20 transition-colors"
                         >
                           Save Notes
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Delete Button */}
+                    <div className="pt-3 border-t border-white/5">
+                      {confirmDeleteId === app.app_id ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onDelete(app.app_id); setConfirmDeleteId(null); }}
+                            className="flex-1 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg text-xs font-medium hover:bg-red-500/30 transition-colors"
+                          >
+                            Confirm Delete
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                            className="flex-1 py-2 bg-white/5 border border-white/10 text-slate-400 rounded-lg text-xs font-medium hover:bg-white/10 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(app.app_id); }}
+                          className="flex items-center gap-1.5 text-xs text-red-400/60 hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 size={12} /> Delete Entry
                         </button>
                       )}
                     </div>

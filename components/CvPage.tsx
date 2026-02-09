@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Download, Mail, Phone, MapPin, Calendar, Globe } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Phone, MapPin, Calendar, Globe, GraduationCap, BookOpen, Book } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { generateCV } from '@/utils/generatePDF';
 
@@ -123,20 +123,20 @@ const CvPage: React.FC = () => {
             <div className="space-y-4">
               <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-5 hover:border-purple-400/40 transition-all">
                 <h3 className="text-white font-bold flex items-center gap-2">
-                  <span className="text-purple-400">🎓</span>
+                  <span className="text-purple-400"><GraduationCap size={18} /></span>
                   BSc in Computer Science & Engineering
                 </h3>
                 <p className="text-slate-400 text-sm mt-1">Southeast University (Present)</p>
               </div>
               <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-xl p-5 hover:border-blue-400/40 transition-all">
                 <h3 className="text-white font-bold flex items-center gap-2">
-                  <span className="text-blue-400">📚</span>
+                  <span className="text-blue-400"><BookOpen size={18} /></span>
                   Higher Secondary School Certificate (H.S.C)
                 </h3>
               </div>
               <div className="bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 rounded-xl p-5 hover:border-emerald-400/40 transition-all">
                 <h3 className="text-white font-bold flex items-center gap-2">
-                  <span className="text-emerald-400">📖</span>
+                  <span className="text-emerald-400"><Book size={18} /></span>
                   Secondary School Certificate (S.S.C)
                 </h3>
               </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Upload, Loader2, CheckCircle, AlertTriangle, ChevronRight, ChevronLeft } from 'lucide-react';
+import { X, Upload, Loader2, CheckCircle, AlertTriangle, ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import AudioUploader from './AudioUploader';
 import GoogleSignInButton from './GoogleSignInButton';
 import type { CompanyMeta, RoleMeta } from '../../src/lib/work/types';
@@ -191,7 +191,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
                   <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
                     i < stepIndex ? 'bg-primary text-white' : i === stepIndex ? 'bg-white text-background' : 'bg-white/5 text-slate-600'
                   }`}>
-                    {i < stepIndex ? '✓' : i + 1}
+                    {i < stepIndex ? <Check size={12} /> : i + 1}
                   </span>
                   <span className="hidden sm:inline">{s}</span>
                 </div>

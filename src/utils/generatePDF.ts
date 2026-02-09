@@ -33,10 +33,10 @@ export const generateCV = () => {
   doc.setFontSize(10);
   doc.setTextColor(200, 200, 200);
   doc.setFont('helvetica', 'normal');
-  doc.text('📞 +880 1867001744', margin, yPos);
-  doc.text('✉️  sifatmorshed123@gmail.com', margin + 70, yPos);
+  doc.text('Phone: +880 1867001744', margin, yPos);
+  doc.text('Email: sifatmorshed123@gmail.com', margin + 70, yPos);
   yPos += 6;
-  doc.text('📍 Dhaka-1219, Bangladesh', margin, yPos);
+  doc.text('Location: Dhaka-1219, Bangladesh', margin, yPos);
 
   // Section divider
   yPos += 10;

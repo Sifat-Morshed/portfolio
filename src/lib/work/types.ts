@@ -33,7 +33,18 @@ export interface ApplicationRow {
   audio_link: string;
   notes: string;
   last_updated: string;
+  started_date: string;   // ISO date when worker started (set on HIRED)
+  email_log: string;      // comma-separated statuses that already triggered emails
 }
+
+// Status rank for forward-only progression
+export const STATUS_RANK: Record<ApplicationStatus, number> = {
+  NEW: 0,
+  AUDIO_PASS: 1,
+  INTERVIEW: 2,
+  HIRED: 3,
+  REJECTED: 3, // terminal — same rank as HIRED (both are final destinations)
+};
 
 export interface CompanyMeta {
   companyId: string;

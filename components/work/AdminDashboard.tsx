@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Loader2, ShieldCheck, LogOut, RefreshCw, ExternalLink } from 'lucide-react';
+import { Loader2, ShieldCheck, LogOut, RefreshCw, ExternalLink, DollarSign, Users } from 'lucide-react';
 import { useAuth } from '../../src/lib/work/AuthContext';
 import AdminTable from './AdminTable';
 import type { ApplicationRow, ApplicationStatus } from '../../src/lib/work/types';
@@ -27,6 +27,8 @@ const MOCK_APPLICATIONS: ApplicationRow[] = DEV_MODE
         audio_link: '',
         notes: '',
         last_updated: new Date(Date.now() - 2 * 86400000).toISOString(),
+        started_date: '',
+        email_log: 'NEW',
       },
       {
         app_id: 'DEV-002',
@@ -45,6 +47,8 @@ const MOCK_APPLICATIONS: ApplicationRow[] = DEV_MODE
         audio_link: 'https://example.com/audio.mp3',
         notes: 'Strong English, great tone',
         last_updated: new Date(Date.now() - 12 * 3600000).toISOString(),
+        started_date: '',
+        email_log: 'NEW,AUDIO_PASS',
       },
       {
         app_id: 'DEV-003',
@@ -63,6 +67,8 @@ const MOCK_APPLICATIONS: ApplicationRow[] = DEV_MODE
         audio_link: 'https://example.com/audio2.mp3',
         notes: 'Scheduled for Monday',
         last_updated: new Date(Date.now() - 3 * 86400000).toISOString(),
+        started_date: '',
+        email_log: 'NEW,AUDIO_PASS,INTERVIEW',
       },
       {
         app_id: 'DEV-004',
@@ -81,6 +87,8 @@ const MOCK_APPLICATIONS: ApplicationRow[] = DEV_MODE
         audio_link: 'https://example.com/audio3.mp3',
         notes: 'Started on Jan 28',
         last_updated: new Date(Date.now() - 7 * 86400000).toISOString(),
+        started_date: new Date(Date.now() - 10 * 86400000).toISOString(),
+        email_log: 'NEW,AUDIO_PASS,INTERVIEW,HIRED',
       },
       {
         app_id: 'DEV-005',
@@ -99,6 +107,8 @@ const MOCK_APPLICATIONS: ApplicationRow[] = DEV_MODE
         audio_link: '',
         notes: 'Did not meet English requirement',
         last_updated: new Date(Date.now() - 7 * 86400000).toISOString(),
+        started_date: '',
+        email_log: 'NEW,REJECTED',
       },
     ]
   : [];
@@ -240,6 +250,45 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleDelete = async (appId: string) => {
+    if (DEV_MODE) {
+      setApplications((prev) => {
+        const updated = prev.filter((app) => app.app_id !== appId);
+        try { localStorage.setItem('dev_applications', JSON.stringify(updated)); } catch { /* ignore */ }
+        return updated;
+      });
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/work/admin/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user?.email || ''}`,
+        },
+        body: JSON.stringify({ app_id: appId }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Delete failed');
+      }
+
+      await fetchApplications();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete application');
+    }
+  };
+
+  // Calculate earnings stats: workers who have been hired for >= 7 days
+  const earningsStats = (() => {
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    const hiredApps = applications.filter((a) => a.status === 'HIRED' && a.started_date);
+    const activeWorkers = hiredApps.filter((a) => (Date.now() - new Date(a.started_date!).getTime()) >= sevenDaysMs);
+    return { totalHired: hiredApps.length, activeWorkers: activeWorkers.length };
+  })();
+
   if (authLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -319,11 +368,41 @@ const AdminDashboard: React.FC = () => {
           </button>
         </div>
       ) : (
+        <>
+        {/* Earnings / Stats Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Total Applications</p>
+            <p className="text-2xl font-bold text-white">{applications.length}</p>
+          </div>
+          <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Users size={12} className="text-emerald-400" />
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Hired</p>
+            </div>
+            <p className="text-2xl font-bold text-emerald-400">{earningsStats.totalHired}</p>
+          </div>
+          <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4">
+            <div className="flex items-center gap-1.5 mb-1">
+              <DollarSign size={12} className="text-emerald-400" />
+              <p className="text-[10px] text-emerald-400 uppercase tracking-wider">Earnings Eligible</p>
+            </div>
+            <p className="text-2xl font-bold text-emerald-300">{earningsStats.activeWorkers}</p>
+            <p className="text-[10px] text-slate-600 mt-0.5">Workers 7+ days active</p>
+          </div>
+          <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Rejection Rate</p>
+            <p className="text-2xl font-bold text-slate-300">{applications.length ? Math.round((applications.filter(a => a.status === 'REJECTED').length / applications.length) * 100) : 0}%</p>
+          </div>
+        </div>
+
         <AdminTable
           applications={applications}
           onStatusChange={handleStatusChange}
+          onDelete={handleDelete}
           onExport={handleExport}
         />
+        </>
       )}
     </div>
   );

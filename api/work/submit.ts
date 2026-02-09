@@ -239,6 +239,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       audio_link: audioLink,
       notes: '',
       last_updated: now,
+      started_date: '',
+      email_log: 'NEW',
     });
 
     // Send email notifications in background (don't block the response)
@@ -284,7 +286,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               html: `
                 <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; background: #0A0A0B; color: #e2e8f0; border-radius: 12px; overflow: hidden;">
                   <div style="background: linear-gradient(135deg, #06b6d4, #3b82f6); padding: 24px 32px;">
-                    <h2 style="margin: 0; color: #fff; font-size: 20px;">Application Received ✓</h2>
+                    <h2 style="margin: 0; color: #fff; font-size: 20px;">Application Received</h2>
                   </div>
                   <div style="padding: 32px;">
                     <p style="color: #94a3b8;">Hi <strong style="color: #fff;">${sanitized.full_name}</strong>,</p>
@@ -294,7 +296,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                       <p style="margin: 0; font-family: monospace; font-size: 18px; color: #06b6d4; font-weight: bold;">${appId}</p>
                     </div>
                     <p style="color: #94a3b8;">Track your status anytime:</p>
-                    <a href="${siteUrl}/work/status?id=${appId}" style="display: inline-block; background: #06b6d4; color: #fff; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Check Status →</a>
+                    <a href="${siteUrl}/work/status?id=${appId}" style="display: inline-block; background: #06b6d4; color: #fff; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Check Status</a>
                     <p style="color: #64748b; font-size: 12px; margin-top: 24px;">Best regards,<br>Sifat Morshed</p>
                   </div>
                 </div>
@@ -312,12 +314,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               transporter.sendMail({
                 from: `"Work With Me Bot" <${process.env.EMAIL_SERVER_USER}>`,
                 to: adminNotifyEmail,
-                subject: `🔔 New Application: ${sanitized.full_name} — ${sanitized.role_title}`,
+                subject: `New Application: ${sanitized.full_name} - ${sanitized.role_title}`,
                 attachments,
                 html: `
                   <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; background: #0A0A0B; color: #e2e8f0; border-radius: 12px; overflow: hidden;">
                     <div style="background: linear-gradient(135deg, #f59e0b, #ef4444); padding: 20px 32px;">
-                      <h2 style="margin: 0; color: #fff; font-size: 18px;">🔔 New Application Received</h2>
+                      <h2 style="margin: 0; color: #fff; font-size: 18px;">New Application Received</h2>
                     </div>
                     <div style="padding: 24px 32px;">
                       <table style="width: 100%; border-collapse: collapse;">
@@ -328,12 +330,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">Role</td><td style="color: #f59e0b; padding: 6px 0; font-weight: 600;">${sanitized.role_title}</td></tr>
                         <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">Reference</td><td style="color: #fff; padding: 6px 0;">${sanitized.reference || '—'}</td></tr>
                         <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">App ID</td><td style="font-family: monospace; color: #06b6d4; padding: 6px 0;">${appId}</td></tr>
-                        <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">CV</td><td style="color: #fff; padding: 6px 0;">${cvAttachment ? '📎 Attached' : 'None'}</td></tr>
-                        <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">Audio</td><td style="color: #fff; padding: 6px 0;">${audioAttachment ? '📎 Attached' : 'None'}</td></tr>
+                        <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">CV</td><td style="color: #fff; padding: 6px 0;">${cvAttachment ? 'Attached' : 'None'}</td></tr>
+                        <tr><td style="color: #64748b; padding: 6px 0; font-size: 13px;">Audio</td><td style="color: #fff; padding: 6px 0;">${audioAttachment ? 'Attached' : 'None'}</td></tr>
                       </table>
-                      ${(cvAttachment || audioAttachment) ? '<p style="color: #22c55e; margin-top: 16px; font-size: 13px;">📎 Files are attached to this email.</p>' : ''}
+                      ${(cvAttachment || audioAttachment) ? '<p style="color: #22c55e; margin-top: 16px; font-size: 13px;">Files are attached to this email.</p>' : ''}
                       <div style="margin-top: 20px;">
-                        <a href="${siteUrl}/work/admin" style="display: inline-block; background: #06b6d4; color: #fff; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Open Admin Dashboard →</a>
+                        <a href="${siteUrl}/work/admin" style="display: inline-block; background: #06b6d4; color: #fff; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Open Admin Dashboard</a>
                       </div>
                     </div>
                   </div>
