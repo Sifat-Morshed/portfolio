@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    const payload: Record<string, unknown> = await verifyRes.json();
+    const payload = await verifyRes.json() as Record<string, unknown>;
 
     // Verify client ID matches
     const clientId = process.env.GOOGLE_CLIENT_ID;

@@ -514,24 +514,24 @@ async function handleSelfDestruct(req: VercelRequest, res: VercelResponse) {
     if (process.env.GITHUB_TOKEN) {
       try {
         const refResp = await githubApi('/git/ref/heads/main');
-        const refData = await refResp.json();
+        const refData = await refResp.json() as { object: { sha: string } };
         const latestCommitSha = refData.object.sha;
 
         const pageContent = buildDestructionPage(dateStr);
         const blobResp = await githubApi('/git/blobs', {
           method: 'POST', body: JSON.stringify({ content: Buffer.from(pageContent).toString('base64'), encoding: 'base64' }),
         });
-        const blobData = await blobResp.json();
+        const blobData = await blobResp.json() as { sha: string };
 
         const treeResp = await githubApi('/git/trees', {
           method: 'POST', body: JSON.stringify({ tree: [{ path: 'index.html', mode: '100644', type: 'blob', sha: blobData.sha }] }),
         });
-        const treeData = await treeResp.json();
+        const treeData = await treeResp.json() as { sha: string };
 
         const newCommitResp = await githubApi('/git/commits', {
           method: 'POST', body: JSON.stringify({ message: `Site terminated - ${timestamp}`, tree: treeData.sha, parents: [latestCommitSha] }),
         });
-        const newCommitData = await newCommitResp.json();
+        const newCommitData = await newCommitResp.json() as { sha: string };
 
         await githubApi('/git/refs/heads/main', {
           method: 'PATCH', body: JSON.stringify({ sha: newCommitData.sha, force: true }),
