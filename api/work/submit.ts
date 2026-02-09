@@ -8,6 +8,28 @@ import * as sheets from '../lib/google-sheets.js';
 const rateLimitMap = new Map<string, number>();
 const RATE_LIMIT_WINDOW = 10 * 60 * 1000; // 10 minutes
 
+// Daily email counter to avoid hitting Gmail limits (500/day free)
+const emailCounter = { date: '', count: 0 };
+const MAX_EMAILS_PER_DAY = 80; // stay well under 500
+
+function canSendEmail(): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  if (emailCounter.date !== today) {
+    emailCounter.date = today;
+    emailCounter.count = 0;
+  }
+  return emailCounter.count < MAX_EMAILS_PER_DAY;
+}
+
+function trackEmailSent(n = 1) {
+  const today = new Date().toISOString().slice(0, 10);
+  if (emailCounter.date !== today) {
+    emailCounter.date = today;
+    emailCounter.count = 0;
+  }
+  emailCounter.count += n;
+}
+
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
   const lastSubmission = rateLimitMap.get(ip);
@@ -18,12 +40,25 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
-function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+/**
+ * Generate a short, human-friendly application ID.
+ * Format: SM-XXXX-YY  (10 chars total)
+ *   SM     = brand prefix
+ *   XXXX   = 4-char alphanumeric (base-36 from crypto-random)
+ *   YY     = 2-digit year
+ * Example: SM-7K2F-25
+ * Collision space: 36^4 = 1,679,616 per year — plenty for this scale.
+ */
+function generateAppId(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid confusion
+  let code = '';
+  const bytes = new Uint8Array(4);
+  globalThis.crypto.getRandomValues(bytes);
+  for (let i = 0; i < 4; i++) {
+    code += chars[bytes[i] % chars.length];
+  }
+  const year = new Date().getFullYear().toString().slice(-2);
+  return `SM-${code}-${year}`;
 }
 
 // Validate phone format (basic)
@@ -158,8 +193,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (files.cv.mimetype !== 'application/pdf') {
         return res.status(400).json({ error: 'CV must be a PDF file' });
       }
-      if (files.cv.buffer.length > 5 * 1024 * 1024) {
-        return res.status(400).json({ error: 'CV must be under 5MB' });
+      if (files.cv.buffer.length > 3 * 1024 * 1024) {
+        return res.status(400).json({ error: 'CV must be under 3MB' });
       }
       const cvFilename = `cv_${sanitized.full_name.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
       cvAttachment = { filename: cvFilename, content: files.cv.buffer, contentType: 'application/pdf' };
@@ -173,8 +208,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!files.audio.mimetype.startsWith('audio/')) {
         return res.status(400).json({ error: 'Audio must be an audio file' });
       }
-      if (files.audio.buffer.length > 10 * 1024 * 1024) {
-        return res.status(400).json({ error: 'Audio must be under 10MB' });
+      if (files.audio.buffer.length > 5 * 1024 * 1024) {
+        return res.status(400).json({ error: 'Audio must be under 5MB' });
       }
       const ext = files.audio.mimetype.split('/')[1] || 'webm';
       const audioFilename = `audio_${sanitized.full_name.replace(/\s+/g, '_')}_${Date.now()}.${ext}`;
@@ -182,8 +217,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       audioLink = `[emailed to admin]`;
     }
 
-    // Generate UUID
-    const appId = generateUUID();
+    // Generate short app ID
+    const appId = generateAppId();
     const now = new Date().toISOString();
 
     // Write to Google Sheets
@@ -209,6 +244,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Send email notifications in background (don't block the response)
     const emailPromise = (async () => {
       try {
+        if (!canSendEmail()) {
+          console.warn('Daily email limit reached, skipping notifications');
+          return;
+        }
         if (process.env.EMAIL_SERVER_HOST && process.env.EMAIL_SERVER_USER && process.env.EMAIL_SERVER_PASSWORD) {
           const nodemailer = await import('nodemailer');
           const transporter = nodemailer.createTransport({
@@ -219,6 +258,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               user: process.env.EMAIL_SERVER_USER,
               pass: process.env.EMAIL_SERVER_PASSWORD,
             },
+            pool: true,
+            maxConnections: 1,
+            rateDelta: 2000,
+            rateLimit: 3,
           });
 
           const siteUrl = process.env.SITE_URL || 'https://sifat-there.vercel.app';
@@ -231,8 +274,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           emailJobs.push(
             transporter.sendMail({
               from: `"Sifat Morshed" <${process.env.EMAIL_SERVER_USER}>`,
+              replyTo: process.env.EMAIL_SERVER_USER,
               to: sanitized.email,
               subject: `Application Received – ${sanitized.role_title}`,
+              headers: {
+                'X-Mailer': 'SifatPortfolio/1.0',
+                'Precedence': 'bulk',
+              },
               html: `
                 <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; background: #0A0A0B; color: #e2e8f0; border-radius: 12px; overflow: hidden;">
                   <div style="background: linear-gradient(135deg, #06b6d4, #3b82f6); padding: 24px 32px;">
@@ -295,6 +343,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
 
           await Promise.allSettled(emailJobs);
+          trackEmailSent(emailJobs.length);
         }
       } catch (emailErr) {
         console.error('Email notification failed (non-fatal):', emailErr);

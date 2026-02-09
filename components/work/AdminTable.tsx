@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronDown, ChevronUp, Search, Download, ExternalLink, Play, Filter, FileDown } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, Download, ExternalLink, Play, Filter, FileDown, Phone, Mail, Globe, User } from 'lucide-react';
 import type { ApplicationRow, ApplicationStatus } from '../../src/lib/work/types';
 
 interface AdminTableProps {
@@ -161,8 +161,8 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
         </button>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto border border-white/10 rounded-xl">
+      {/* Desktop Table — hidden on mobile */}
+      <div className="hidden md:block overflow-x-auto border border-white/10 rounded-xl">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/5 bg-white/[0.02]">
@@ -331,6 +331,167 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card Layout — visible only on mobile */}
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <div className="text-center py-12 text-slate-600 bg-white/[0.02] border border-white/10 rounded-xl">
+            No applications found
+          </div>
+        ) : (
+          filtered.map((app) => {
+            const isExpanded = expandedId === app.app_id;
+            return (
+              <div key={app.app_id} className="border border-white/10 rounded-xl overflow-hidden bg-white/[0.01]">
+                {/* Card Header — always visible */}
+                <button
+                  onClick={() => setExpandedId(isExpanded ? null : app.app_id)}
+                  className="w-full px-4 py-3.5 flex items-center gap-3 text-left"
+                >
+                  {/* Avatar circle with initials */}
+                  <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-primary">
+                      {app.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-white truncate">{app.full_name}</p>
+                      <span className={`shrink-0 inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_COLORS[app.status] || 'bg-white/10 text-white'}`}>
+                        {STATUS_LABELS[app.status] || app.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 truncate">{app.role_title} · {new Date(app.timestamp).toLocaleDateString()}</p>
+                  </div>
+                  <ChevronDown
+                    size={16}
+                    className={`text-slate-500 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {/* Expanded Card Details */}
+                {isExpanded && (
+                  <div className="px-4 pb-4 space-y-4 border-t border-white/5 pt-3">
+                    {/* Contact Info */}
+                    <div className="grid grid-cols-1 gap-2.5">
+                      <div className="flex items-center gap-2.5 text-sm">
+                        <Mail size={13} className="text-slate-600 shrink-0" />
+                        <a href={`mailto:${app.email}`} className="text-primary truncate text-xs">{app.email}</a>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-sm">
+                        <Phone size={13} className="text-slate-600 shrink-0" />
+                        <span className="text-white text-xs">{app.phone || '—'}</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-sm">
+                        <Globe size={13} className="text-slate-600 shrink-0" />
+                        <span className="text-white text-xs">{app.nationality || '—'}</span>
+                      </div>
+                    </div>
+
+                    {/* App ID + Meta */}
+                    <div className="bg-white/[0.03] rounded-lg p-3 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-slate-600 uppercase tracking-wider">App ID</span>
+                        <span className="font-mono text-xs text-primary">{app.app_id}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-slate-600 uppercase tracking-wider">Reference</span>
+                        <span className="text-xs text-white">{app.reference || '—'}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-slate-600 uppercase tracking-wider">Compliance</span>
+                        <span className={`text-xs ${app.blacklist_acknowledged === 'true' ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {app.blacklist_acknowledged === 'true' ? '✓ Acknowledged' : '✗ Not acknowledged'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Media */}
+                    {(app.cv_link || app.audio_link) && (
+                      <div className="flex flex-wrap gap-2">
+                        {app.cv_link && (
+                          <a
+                            href={app.cv_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-lg text-xs text-primary"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink size={12} /> View CV
+                          </a>
+                        )}
+                        {app.audio_link && (
+                          <a
+                            href={app.audio_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-lg text-xs text-primary"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Play size={12} /> Play Audio
+                          </a>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Audio Player (inline on mobile) */}
+                    {app.audio_link && (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <audio controls className="w-full h-8" src={app.audio_link}>
+                          <a href={app.audio_link}>Play Audio</a>
+                        </audio>
+                      </div>
+                    )}
+
+                    {/* Status Update */}
+                    <div className="space-y-2">
+                      <label className="block text-[10px] text-slate-600 uppercase tracking-wider">Update Status</label>
+                      <select
+                        value={app.status}
+                        onChange={(e) => handleStatusSelect(app.app_id, e.target.value as ApplicationStatus)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full px-3 py-2.5 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-primary focus:outline-none appearance-none cursor-pointer"
+                      >
+                        {STATUS_OPTIONS.map((s) => (
+                          <option key={s} value={s} className="bg-[#0A0A0B] text-white">{STATUS_LABELS[s]}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Notes */}
+                    <div className="space-y-2">
+                      <label className="block text-[10px] text-slate-600 uppercase tracking-wider">Notes</label>
+                      <textarea
+                        value={editNotes[app.app_id] ?? app.notes}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setEditNotes((prev) => ({ ...prev, [app.app_id]: e.target.value }));
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        rows={2}
+                        className="w-full px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-primary focus:outline-none resize-none"
+                        placeholder="Internal notes..."
+                      />
+                      {editNotes[app.app_id] !== undefined && editNotes[app.app_id] !== app.notes && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onStatusChange(app.app_id, app.status, editNotes[app.app_id]);
+                            setEditNotes((prev) => { const n = { ...prev }; delete n[app.app_id]; return n; });
+                          }}
+                          className="w-full py-2 bg-primary/10 border border-primary/20 text-primary rounded-lg text-xs font-medium hover:bg-primary/20 transition-colors"
+                        >
+                          Save Notes
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
       <p className="text-xs text-slate-600">{filtered.length} of {applications.length} applications</p>

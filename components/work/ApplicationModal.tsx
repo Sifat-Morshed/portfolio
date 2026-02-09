@@ -66,8 +66,8 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
         setError('CV must be a PDF file');
         return;
       }
-      if (file.size > 5 * 1024 * 1024) {
-        setError('CV must be under 5MB');
+      if (file.size > 3 * 1024 * 1024) {
+        setError(`CV must be under 3MB. Yours is ${(file.size / 1024 / 1024).toFixed(1)}MB.`);
         return;
       }
       setCvFile(file);
@@ -305,11 +305,11 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
 
               {/* CV Upload */}
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Upload CV (PDF) *</label>
+                <label className="block text-sm font-medium text-white mb-1">Upload CV (PDF, max 3MB) *</label>
                 <label className="flex items-center gap-3 px-4 py-3 border border-dashed border-white/10 rounded-lg cursor-pointer hover:border-primary/40 transition-colors">
                   <Upload size={18} className="text-slate-500" />
-                  <span className="text-sm text-slate-400">
-                    {cvFile ? cvFile.name : 'Choose PDF file...'}
+                  <span className="text-sm text-slate-400 truncate">
+                    {cvFile ? `${cvFile.name} (${(cvFile.size / 1024 / 1024).toFixed(1)}MB)` : 'Choose PDF file...'}
                   </span>
                   <input
                     type="file"

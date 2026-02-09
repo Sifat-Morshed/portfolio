@@ -133,9 +133,10 @@ const StatusPage: React.FC = () => {
             <input
               type="text"
               value={appId}
-              onChange={(e) => setAppId(e.target.value)}
-              placeholder="Enter your Application ID..."
-              className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:border-primary focus:outline-none transition-colors font-mono"
+              onChange={(e) => setAppId(e.target.value.toUpperCase())}
+              placeholder="e.g. SM-7K2F-25"
+              className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:border-primary focus:outline-none transition-colors font-mono tracking-wider"
+              maxLength={12}
             />
           </div>
           <button

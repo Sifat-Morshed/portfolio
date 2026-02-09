@@ -16,11 +16,19 @@ const STATUS_LABELS: Record<ApplicationStatus, string> = {
 };
 
 const STATUS_DESCRIPTIONS: Record<ApplicationStatus, string> = {
-  NEW: 'Your application is being reviewed by our team.',
-  AUDIO_PASS: 'Your audio passed! Moving to the next stage.',
-  INTERVIEW: 'You\'ve been selected for an interview.',
-  HIRED: 'Congratulations! Welcome to the team.',
-  REJECTED: 'Unfortunately, your application was not selected this time.',
+  NEW: 'Your application is being carefully reviewed. We evaluate your audio, CV, and profile to find the best fit.',
+  AUDIO_PASS: 'Your audio recording stood out! You\'re moving to the next stage.',
+  INTERVIEW: 'You\'ve been shortlisted for an interview — check your email for scheduling details.',
+  HIRED: 'Welcome aboard! 🎉 Onboarding details are on the way.',
+  REJECTED: 'We\'ve decided not to move forward this time. You\'re welcome to re-apply in the future.',
+};
+
+const NEXT_STEPS: Record<ApplicationStatus, string> = {
+  NEW: 'Typical review: 1-3 business days. You\'ll get an email when your status changes.',
+  AUDIO_PASS: 'Keep your phone and email reachable — you may be contacted for a brief chat.',
+  INTERVIEW: 'Prepare to discuss your experience, motivation, and handle a short live scenario.',
+  HIRED: 'Expect an onboarding email within 24-48 hours with training access and schedule.',
+  REJECTED: 'Keep building your skills — we\'d love to see you apply again.',
 };
 
 const StatusTimeline: React.FC<StatusTimelineProps> = ({ data }) => {
@@ -99,7 +107,10 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ data }) => {
                     {STATUS_LABELS[stepStatus]}
                   </p>
                   {state === 'active' && (
-                    <p className="text-xs text-slate-500 mt-0.5">{STATUS_DESCRIPTIONS[stepStatus]}</p>
+                    <div className="mt-1 space-y-1">
+                      <p className="text-xs text-slate-400 leading-relaxed">{STATUS_DESCRIPTIONS[stepStatus]}</p>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">→ {NEXT_STEPS[stepStatus]}</p>
+                    </div>
                   )}
                 </div>
               </div>
