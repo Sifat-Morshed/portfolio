@@ -139,7 +139,7 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
-      const res = await fetch('/api/work/admin/list', {
+      const res = await fetch('/api/work/admin?action=list', {
         headers: {
           Authorization: `Bearer ${user.email}`,
         },
@@ -198,8 +198,8 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
-      const res = await fetch('/api/work/admin/update', {
-        method: 'PATCH',
+      const res = await fetch('/api/work/admin?action=update', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${user?.email || ''}`,
@@ -234,7 +234,7 @@ const AdminDashboard: React.FC = () => {
         );
         csv = [header, ...rows].join('\n');
       } else {
-        const res = await fetch('/api/work/admin/export', {
+        const res = await fetch('/api/work/admin?action=export', {
           headers: {
             Authorization: `Bearer ${user?.email || ''}`,
           },
@@ -266,8 +266,8 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
-      const res = await fetch('/api/work/admin/delete', {
-        method: 'DELETE',
+      const res = await fetch('/api/work/admin?action=delete', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${user?.email || ''}`,
@@ -297,7 +297,7 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
-      const res = await fetch('/api/work/admin/bulk-delete', {
+      const res = await fetch('/api/work/admin?action=bulk-delete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -479,7 +479,7 @@ const ManualApplicationLogger: React.FC<{ userEmail: string; onLogged: () => voi
     setLogging(true);
     setResult(null);
     try {
-      const res = await fetch('/api/work/admin/manual-log', {
+      const res = await fetch('/api/work/admin?action=manual-log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userEmail}` },
         body: JSON.stringify({
@@ -639,7 +639,7 @@ const ManualEmailSender: React.FC<{ userEmail: string }> = ({ userEmail }) => {
     setSending(true);
     setResult(null);
     try {
-      const res = await fetch('/api/work/admin/send-email', {
+      const res = await fetch('/api/work/admin?action=send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userEmail}` },
         body: JSON.stringify({ to, subject, content }),
@@ -802,7 +802,7 @@ const SelfDestructButton: React.FC<{ userEmail: string }> = ({ userEmail }) => {
     if (!finalAnswer.trim()) { setError('Answer the question'); return; }
     setDestroying(true); setError('');
     try {
-      const res = await fetch('/api/work/admin/self-destruct', {
+      const res = await fetch('/api/work/admin?action=self-destruct', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userEmail}` },
         body: JSON.stringify({ password, final_answer: finalAnswer }),

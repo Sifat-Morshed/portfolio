@@ -91,7 +91,7 @@ const InlineEmailSender: React.FC<{ app: ApplicationRow; userEmail: string }> = 
     setSending(true);
     setResult(null);
     try {
-      const res = await fetch('/api/work/admin/send-email', {
+      const res = await fetch('/api/work/admin?action=send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userEmail}` },
         body: JSON.stringify({ to: app.email, subject, content }),
