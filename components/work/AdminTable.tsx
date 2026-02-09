@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronDown, ChevronUp, Search, Download, ExternalLink, Play, Filter, FileDown, Phone, Mail, Globe, User, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, Download, ExternalLink, Play, Filter, FileDown, Phone, Mail, Globe, User, Trash2, CheckSquare, Square } from 'lucide-react';
 import type { ApplicationRow, ApplicationStatus } from '../../src/lib/work/types';
 
 interface AdminTableProps {
   applications: ApplicationRow[];
   onStatusChange: (appId: string, status: ApplicationStatus, notes?: string) => void;
   onDelete: (appId: string) => void;
+  onBulkDelete: (appIds: string[]) => void;
   onExport: () => void;
 }
 
@@ -43,7 +44,7 @@ const QUICK_FILTERS = [
 type SortField = 'timestamp' | 'full_name' | 'status' | 'role_id';
 type SortDir = 'asc' | 'desc';
 
-const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, onDelete, onExport }) => {
+const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, onDelete, onBulkDelete, onExport }) => {
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -52,6 +53,8 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editNotes, setEditNotes] = useState<Record<string, string>>({});
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
 
   const filtered = useMemo(() => {
     let data = [...applications];
@@ -107,6 +110,34 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
     onStatusChange(appId, newStatus, editNotes[appId]);
   };
 
+  // Selection helpers
+  const toggleSelect = (appId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(appId)) next.delete(appId);
+      else next.add(appId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(a => a.app_id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    if (!confirmBulkDelete) { setConfirmBulkDelete(true); return; }
+    onBulkDelete(Array.from(selectedIds));
+    setSelectedIds(new Set());
+    setConfirmBulkDelete(false);
+  };
+
+  const allSelected = filtered.length > 0 && selectedIds.size === filtered.length;
+
   return (
     <div className="space-y-4">
       {/* Quick Role Filters */}
@@ -155,12 +186,41 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
         </div>
 
         {/* Export */}
-        <button
-          onClick={onExport}
-          className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white hover:border-primary transition-colors"
-        >
-          <Download size={14} /> Export CSV
-        </button>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <>
+              {confirmBulkDelete ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleBulkDelete}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-500/20 border border-red-500/30 rounded-lg text-sm text-red-400 hover:bg-red-500/30 transition-colors"
+                  >
+                    <Trash2 size={14} /> Confirm Delete ({selectedIds.size})
+                  </button>
+                  <button
+                    onClick={() => setConfirmBulkDelete(false)}
+                    className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-slate-400 hover:bg-white/10 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400 hover:bg-red-500/20 transition-colors"
+                >
+                  <Trash2 size={14} /> Delete Selected ({selectedIds.size})
+                </button>
+              )}
+            </>
+          )}
+          <button
+            onClick={onExport}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white hover:border-primary transition-colors"
+          >
+            <Download size={14} /> Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Desktop Table — hidden on mobile */}
@@ -168,6 +228,11 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/5 bg-white/[0.02]">
+              <th className="text-left px-3 py-3 w-10">
+                <button onClick={toggleSelectAll} className="text-slate-500 hover:text-primary transition-colors">
+                  {allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+                </button>
+              </th>
               <th
                 className="text-left px-4 py-3 text-slate-500 font-medium cursor-pointer select-none"
                 onClick={() => toggleSort('timestamp')}
@@ -200,7 +265,7 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-12 text-slate-600">
+                <td colSpan={8} className="text-center py-12 text-slate-600">
                   No applications found
                 </td>
               </tr>
@@ -211,6 +276,11 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                     className="border-b border-white/5 hover:bg-white/[0.02] cursor-pointer transition-colors"
                     onClick={() => setExpandedId(expandedId === app.app_id ? null : app.app_id)}
                   >
+                    <td className="px-3 py-3 w-10" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => toggleSelect(app.app_id)} className="text-slate-500 hover:text-primary transition-colors">
+                        {selectedIds.has(app.app_id) ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} />}
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-slate-400 whitespace-nowrap">
                       {new Date(app.timestamp).toLocaleDateString()}
                     </td>
@@ -234,7 +304,7 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                   {/* Expanded Quick View */}
                   {expandedId === app.app_id && (
                     <tr className="bg-white/[0.02]">
-                      <td colSpan={7} className="px-4 py-4">
+                      <td colSpan={8} className="px-4 py-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {/* Details */}
                           <div className="space-y-2">
@@ -383,6 +453,13 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                   onClick={() => setExpandedId(isExpanded ? null : app.app_id)}
                   className="w-full px-4 py-3.5 flex items-center gap-3 text-left"
                 >
+                  {/* Checkbox */}
+                  <div
+                    onClick={(e) => { e.stopPropagation(); toggleSelect(app.app_id); }}
+                    className="shrink-0 text-slate-500 hover:text-primary transition-colors"
+                  >
+                    {selectedIds.has(app.app_id) ? <CheckSquare size={16} className="text-primary" /> : <Square size={16} />}
+                  </div>
                   {/* Avatar circle with initials */}
                   <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
                     <span className="text-xs font-bold text-primary">

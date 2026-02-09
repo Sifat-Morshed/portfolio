@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Loader2, ShieldCheck, LogOut, RefreshCw, ExternalLink, DollarSign, Users, Send, AlertTriangle, Skull } from 'lucide-react';
+import { Loader2, ShieldCheck, LogOut, RefreshCw, ExternalLink, DollarSign, Users, Send, AlertTriangle, Skull, UserPlus, FileText } from 'lucide-react';
 import { useAuth } from '../../src/lib/work/AuthContext';
 import AdminTable from './AdminTable';
 import type { ApplicationRow, ApplicationStatus } from '../../src/lib/work/types';
@@ -286,6 +286,42 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleBulkDelete = async (appIds: string[]) => {
+    if (DEV_MODE) {
+      setApplications((prev) => {
+        const updated = prev.filter((app) => !appIds.includes(app.app_id));
+        try { localStorage.setItem('dev_applications', JSON.stringify(updated)); } catch { /* ignore */ }
+        return updated;
+      });
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/work/admin/bulk-delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user?.email || ''}`,
+        },
+        body: JSON.stringify({ app_ids: appIds }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Bulk delete failed');
+      }
+
+      const data = await res.json();
+      if (data.failed > 0) {
+        alert(`Deleted ${data.deleted} of ${appIds.length}. ${data.failed} failed.`);
+      }
+
+      await fetchApplications();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to bulk delete');
+    }
+  };
+
   // Calculate earnings stats: workers who have been hired for >= 7 days
   const earningsStats = (() => {
     const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
@@ -406,8 +442,12 @@ const AdminDashboard: React.FC = () => {
           applications={applications}
           onStatusChange={handleStatusChange}
           onDelete={handleDelete}
+          onBulkDelete={handleBulkDelete}
           onExport={handleExport}
         />
+
+        {/* Manual Application Logger */}
+        <ManualApplicationLogger userEmail={user?.email || ''} onLogged={fetchApplications} />
 
         {/* Manual Email Sender */}
         <ManualEmailSender userEmail={user?.email || ''} />
@@ -417,13 +457,181 @@ const AdminDashboard: React.FC = () => {
   );
 };
 
-// ─── Manual Email Sender ───────────────────────────────────────────────────────
+// ─── Manual Application Logger ─────────────────────────────────────────────────
+const ROLE_OPTIONS = [
+  { id: 'global-setter', title: 'Remote Appointment Setter (Global)', company: 'silverlight-research' },
+  { id: 'bosnian-specialist', title: 'Senior Sales Specialist (Bosnia Exclusive)', company: 'silverlight-research' },
+];
+
+const ManualApplicationLogger: React.FC<{ userEmail: string; onLogged: () => void }> = ({ userEmail, onLogged }) => {
+  const [form, setForm] = useState({ full_name: '', email: '', phone: '', nationality: '', role_id: ROLE_OPTIONS[0].id, reference: '' });
+  const [logging, setLogging] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const selectedRole = ROLE_OPTIONS.find(r => r.id === form.role_id) || ROLE_OPTIONS[0];
+
+  const handleLog = async () => {
+    if (!form.full_name || !form.email || !form.phone || !form.nationality) {
+      setResult({ ok: false, msg: 'Name, email, phone, and nationality are required' });
+      return;
+    }
+    setLogging(true);
+    setResult(null);
+    try {
+      const res = await fetch('/api/work/admin/manual-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userEmail}` },
+        body: JSON.stringify({
+          full_name: form.full_name,
+          email: form.email,
+          phone: form.phone,
+          nationality: form.nationality,
+          role_id: selectedRole.id,
+          role_title: selectedRole.title,
+          company_id: selectedRole.company,
+          reference: form.reference,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.error === 'duplicate') {
+          throw new Error(`Duplicate: ${data.existing_name} already applied (${data.existing_id})`);
+        }
+        throw new Error(data.error || 'Failed to log');
+      }
+      setResult({ ok: true, msg: `Logged successfully! App ID: ${data.app_id} — confirmation email sent.` });
+      setForm({ full_name: '', email: '', phone: '', nationality: '', role_id: ROLE_OPTIONS[0].id, reference: '' });
+      onLogged();
+    } catch (err) {
+      setResult({ ok: false, msg: err instanceof Error ? err.message : 'Failed to log application' });
+    } finally {
+      setLogging(false);
+    }
+  };
+
+  const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm(prev => ({ ...prev, [field]: e.target.value }));
+
+  return (
+    <div className="mt-8 bg-white/[0.02] border border-white/10 rounded-xl p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <UserPlus size={16} className="text-emerald-400" />
+        <h3 className="text-lg font-bold text-white">Manual Application Logger</h3>
+      </div>
+      <p className="text-xs text-slate-500 mb-4">Log an application manually. The applicant will receive the same confirmation email as a normal submission.</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <input type="text" value={form.full_name} onChange={set('full_name')} placeholder="Full Name *"
+          className="px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-emerald-400 focus:outline-none" />
+        <input type="email" value={form.email} onChange={set('email')} placeholder="Email *"
+          className="px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-emerald-400 focus:outline-none" />
+        <input type="tel" value={form.phone} onChange={set('phone')} placeholder="Phone *"
+          className="px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-emerald-400 focus:outline-none" />
+        <input type="text" value={form.nationality} onChange={set('nationality')} placeholder="Nationality *"
+          className="px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-emerald-400 focus:outline-none" />
+        <select value={form.role_id} onChange={set('role_id')}
+          className="px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-emerald-400 focus:outline-none appearance-none cursor-pointer">
+          {ROLE_OPTIONS.map(r => (
+            <option key={r.id} value={r.id} className="bg-[#0A0A0B] text-white">{r.title}</option>
+          ))}
+        </select>
+        <input type="text" value={form.reference} onChange={set('reference')} placeholder="Reference (optional)"
+          className="px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-emerald-400 focus:outline-none" />
+      </div>
+      <div className="flex items-center gap-3">
+        <button onClick={handleLog} disabled={logging}
+          className="flex items-center gap-2 px-5 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-sm font-medium hover:bg-emerald-500/20 transition-colors disabled:opacity-50">
+          {logging ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
+          {logging ? 'Logging...' : 'Log Application'}
+        </button>
+        {result && (
+          <p className={`text-xs ${result.ok ? 'text-emerald-400' : 'text-red-400'}`}>{result.msg}</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Manual Email Sender with Templates ────────────────────────────────────────
+const EMAIL_TEMPLATES: { label: string; subject: string; content: string }[] = [
+  {
+    label: 'Custom (blank)',
+    subject: '',
+    content: '',
+  },
+  {
+    label: 'Application Received',
+    subject: 'Application Received – [Role Title]',
+    content: `Hi [Applicant Name],
+
+Thank you for submitting your application. We've received it and it is currently under review.
+
+Your application ID has been assigned and you can track your status anytime using the link provided in your confirmation email.
+
+We'll be in touch soon with next steps. If you have any questions in the meantime, feel free to reply to this email.
+
+Best regards,
+Sifat Morshed`,
+  },
+  {
+    label: 'Status Change / Update',
+    subject: 'Application Update – [Role Title]',
+    content: `Hi [Applicant Name],
+
+We wanted to let you know that your application status has been updated.
+
+Please check your application status page for the latest details. If you have any questions, don't hesitate to reach out.
+
+Best regards,
+Sifat Morshed`,
+  },
+  {
+    label: 'Audio Script Request',
+    subject: 'Action Required: Audio Recording – [Role Title]',
+    content: `Hi [Applicant Name],
+
+As part of your application process, we need you to record a short audio sample (45–60 seconds). This helps us evaluate your English communication and phone presence.
+
+Please follow the instructions below carefully:
+
+──────────────────
+
+AUDIO RECORDING INSTRUCTIONS
+
+Record yourself reading the script below. Keep it between 45 and 60 seconds. Use a quiet environment, speak clearly, and don't rush.
+
+Part 1 – Introduction (~30 seconds):
+Speak naturally about yourself — your name, where you're from, any relevant experience you have, and why you're interested in this role.
+
+Part 2 – Cold Call Roleplay (~15–30 seconds):
+You are calling a senior IT director named Mr. James. He is busy and skeptical. Your goal is to introduce Silverlight Research, explain you're conducting a short industry survey on the evolving cyber threats in enterprise infrastructure (not selling anything), and convince him to stay on the line for 2 minutes of questions.
+
+Stay confident, handle his pushback, and keep it professional.
+
+──────────────────
+
+Once your recording is ready, you can upload it through your application status page or reply to this email with the audio file attached.
+
+Accepted formats: MP3, WAV, M4A, WEBM (max 5 MB).
+
+Sifat Morshed | Independent Contractor | Recruiting for: Silverlight Research`,
+  },
+];
+
 const ManualEmailSender: React.FC<{ userEmail: string }> = ({ userEmail }) => {
   const [to, setTo] = useState('');
   const [subject, setSubject] = useState('');
   const [content, setContent] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState(0);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const applyTemplate = (index: number) => {
+    setSelectedTemplate(index);
+    const t = EMAIL_TEMPLATES[index];
+    setSubject(t.subject);
+    setContent(t.content);
+    setResult(null);
+  };
 
   const handleSend = async () => {
     if (!to || !subject || !content) { setResult({ ok: false, msg: 'All fields are required' }); return; }
@@ -440,7 +648,7 @@ const ManualEmailSender: React.FC<{ userEmail: string }> = ({ userEmail }) => {
         throw new Error(err.error || 'Failed to send');
       }
       setResult({ ok: true, msg: 'Email sent successfully!' });
-      setTo(''); setSubject(''); setContent('');
+      setTo(''); setSubject(''); setContent(''); setSelectedTemplate(0);
     } catch (err) {
       setResult({ ok: false, msg: err instanceof Error ? err.message : 'Failed to send email' });
     } finally {
@@ -454,7 +662,26 @@ const ManualEmailSender: React.FC<{ userEmail: string }> = ({ userEmail }) => {
         <Send size={16} className="text-primary" />
         <h3 className="text-lg font-bold text-white">Manual Email Sender</h3>
       </div>
-      <p className="text-xs text-slate-500 mb-4">Send emails using the portfolio dark theme template. Content will be formatted automatically.</p>
+      <p className="text-xs text-slate-500 mb-4">Send emails using the portfolio dark theme template. Select a template to auto-fill, then edit as needed. Use <span className="text-primary font-mono">[Applicant Name]</span> and <span className="text-primary font-mono">[Role Title]</span> as placeholders.</p>
+
+      {/* Template Selector */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {EMAIL_TEMPLATES.map((t, i) => (
+          <button
+            key={i}
+            onClick={() => applyTemplate(i)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              selectedTemplate === i
+                ? 'bg-primary/20 text-primary border border-primary/30'
+                : 'bg-white/5 text-slate-400 border border-white/5 hover:border-white/10'
+            }`}
+          >
+            <FileText size={12} />
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
         <input
           type="email" value={to} onChange={(e) => setTo(e.target.value)}
@@ -469,8 +696,8 @@ const ManualEmailSender: React.FC<{ userEmail: string }> = ({ userEmail }) => {
       </div>
       <textarea
         value={content} onChange={(e) => setContent(e.target.value)}
-        rows={4} placeholder="Email content (supports line breaks)..."
-        className="w-full px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-primary focus:outline-none resize-none mb-3"
+        rows={selectedTemplate === 3 ? 14 : 6} placeholder="Email content (supports line breaks)..."
+        className="w-full px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-primary focus:outline-none resize-none mb-3 leading-relaxed"
       />
       <div className="flex items-center gap-3">
         <button
