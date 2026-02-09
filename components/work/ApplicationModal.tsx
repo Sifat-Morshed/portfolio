@@ -176,7 +176,8 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
 
       {/* Modal */}
       <div
-        className="relative bg-[#0A0A0B] border border-white/10 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl shadow-primary/5"
+        className="relative bg-[#0A0A0B] border border-white/10 rounded-2xl w-full max-w-lg flex flex-col shadow-2xl shadow-primary/5"
+        style={{ maxHeight: '90vh', overflow: 'hidden' }}
         onMouseDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -213,7 +214,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
           </div>
         )}
 
-        <div className="p-6 space-y-5 overflow-y-auto" data-lenis-prevent>
+        <div className="p-6 space-y-5 overflow-y-auto" style={{ flex: '1 1 auto', minHeight: 0 }} data-lenis-prevent>
           {/* Step: Auth */}
           {step === 'auth' && (
             <div className="text-center py-8">
