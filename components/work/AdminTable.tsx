@@ -184,6 +184,7 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterDate, setFilterDate] = useState<string>('');
   const [sortField, setSortField] = useState<SortField>('timestamp');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -191,9 +192,40 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+
+  // Extract unique dates from applications
+  const uniqueDates = useMemo(() => {
+    const dates = new Set<string>();
+    applications.forEach(app => {
+      if (app.timestamp) {
+        const d = new Date(app.timestamp);
+        if (!isNaN(d.getTime())) dates.add(d.toISOString().split('T')[0]);
+      }
+    });
+    return Array.from(dates).sort((a, b) => b.localeCompare(a));
+  }, [applications]);
+
+  const copyApplicantInfo = (app: ApplicationRow) => {
+    const text = `Name: ${app.full_name}\nEmail: ${app.email}\nPhone: ${app.phone}\nNationality: ${app.nationality}`;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopyFeedback(app.app_id);
+      setTimeout(() => setCopyFeedback(null), 2000);
+    });
+  };
 
   const filtered = useMemo(() => {
     let data = [...applications];
+
+    // Filter by date
+    if (filterDate) {
+      data = data.filter(a => {
+        if (!a.timestamp) return false;
+        const d = new Date(a.timestamp);
+        if (isNaN(d.getTime())) return false;
+        return d.toISOString().split('T')[0] === filterDate;
+      });
+    }
 
     // Search
     if (search.trim()) {
@@ -226,7 +258,7 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
     });
 
     return data;
-  }, [applications, search, filterRole, filterStatus, sortField, sortDir]);
+  }, [applications, search, filterRole, filterStatus, filterDate, sortField, sortDir]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -317,6 +349,20 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
             <option value="" className="bg-[#0A0A0B] text-white">All Statuses</option>
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s} className="bg-[#0A0A0B] text-white">{STATUS_LABELS[s]}</option>
+            ))}
+          </select>
+
+          {/* Date Filter */}
+          <select
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg text-sm text-white focus:border-primary focus:outline-none appearance-none cursor-pointer"
+          >
+            <option value="" className="bg-[#0A0A0B] text-white">All Dates</option>
+            {uniqueDates.map((date) => (
+              <option key={date} value={date} className="bg-[#0A0A0B] text-white">
+                {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </option>
             ))}
           </select>
         </div>
@@ -420,7 +466,18 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                     <td className="px-4 py-3 text-slate-400 whitespace-nowrap">
                       {formatDate(app.timestamp)}
                     </td>
-                    <td className="px-4 py-3 text-white font-medium">{app.full_name}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-medium">{app.full_name}</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); copyApplicantInfo(app); }}
+                          className="text-slate-500 hover:text-primary transition-colors"
+                          title="Copy applicant info"
+                        >
+                          {copyFeedback === app.app_id ? <Check size={14} className="text-emerald-400" /> : <FileText size={14} />}
+                        </button>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-slate-400">{app.email}</td>
                     <td className="px-4 py-3 text-slate-400">{app.nationality || '—'}</td>
                     <td className="px-4 py-3 text-slate-400 text-xs">{app.role_title}</td>
@@ -609,6 +666,12 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-white truncate">{app.full_name}</p>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); copyApplicantInfo(app); }}
+                        className="text-slate-500 hover:text-primary transition-colors shrink-0"
+                      >
+                        {copyFeedback === app.app_id ? <Check size={13} className="text-emerald-400" /> : <FileText size={13} />}
+                      </button>
                       <span className={`shrink-0 inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_COLORS[app.status] || 'bg-white/10 text-white'}`}>
                         {STATUS_LABELS[app.status] || app.status}
                       </span>

@@ -25,8 +25,8 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({ onFileSelected }) => {
       setError('');
 
       // Check type
-      if (!ACCEPTED_TYPES.includes(selectedFile.type) && !selectedFile.name.match(/\.(mp3|wav|m4a)$/i)) {
-        setError('Only MP3, WAV, and M4A files are accepted.');
+      if (!ACCEPTED_TYPES.includes(selectedFile.type) && !selectedFile.name.match(/\.mp3$/i)) {
+        setError('Only MP3 files are accepted.');
         return;
       }
 
@@ -168,12 +168,12 @@ const AudioUploader: React.FC<AudioUploaderProps> = ({ onFileSelected }) => {
             Drag & drop your audio file, or <span className="text-primary font-medium">browse</span>
           </p>
           <p className="text-xs text-slate-500">
-            MP3, WAV, or M4A · 30–60 seconds · Max {MAX_SIZE_MB}MB
+            MP3 only · 30–60 seconds · Max {MAX_SIZE_MB}MB
           </p>
           <input
             ref={inputRef}
             type="file"
-            accept=".mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/mp4"
+            accept=".mp3,audio/mpeg"
             onChange={handleFileChange}
             className="hidden"
           />

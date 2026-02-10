@@ -218,15 +218,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let audioLink = '';
     let audioAttachment: { filename: string; content: Buffer; contentType: string } | null = null;
     if (files.audio) {
-      if (!files.audio.mimetype.startsWith('audio/')) {
-        return res.status(400).json({ error: 'Audio must be an audio file' });
+      if (files.audio.mimetype !== 'audio/mpeg' && files.audio.mimetype !== 'audio/mp3') {
+        return res.status(400).json({ error: 'Audio must be MP3 format' });
       }
       if (files.audio.buffer.length > 5 * 1024 * 1024) {
         return res.status(400).json({ error: 'Audio must be under 5MB' });
       }
-      const ext = files.audio.mimetype.split('/')[1] || 'webm';
-      const audioFilename = `audio_${sanitized.full_name.replace(/\s+/g, '_')}_${Date.now()}.${ext}`;
-      audioAttachment = { filename: audioFilename, content: files.audio.buffer, contentType: files.audio.mimetype };
+      const audioFilename = `audio_${sanitized.full_name.replace(/\s+/g, '_')}_${Date.now()}.mp3`;
+      audioAttachment = { filename: audioFilename, content: files.audio.buffer, contentType: 'audio/mpeg' };
       audioLink = `[emailed to admin]`;
     }
 
@@ -375,7 +374,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })();
 
     // Wait for emails but with a timeout — don't let slow SMTP delay the response
-    await Promise.race([emailPromise, new Promise((r) => setTimeout(r, 8000))]);
+    await Promise.race([emailPromise, new Promise((r) => setTimeout(r, 3000))]);
 
     return res.status(200).json({ app_id: appId });
   } catch (error: unknown) {

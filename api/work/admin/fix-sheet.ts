@@ -42,7 +42,7 @@ async function getAccessToken() {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: jwt }),
   });
-  const tokenData = await tokenRes.json();
+  const tokenData = await tokenRes.json() as { access_token?: string };
   if (!tokenData.access_token) throw new Error('Failed to get access token');
   return tokenData.access_token;
 }

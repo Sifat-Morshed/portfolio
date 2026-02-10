@@ -10,10 +10,7 @@ interface State {
 }
 
 class WorkErrorBoundary extends React.Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false };
-  }
+  state: State = { hasError: false };
 
   static getDerivedStateFromError(): State {
     return { hasError: true };
