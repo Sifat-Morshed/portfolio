@@ -228,7 +228,7 @@ const AdminDashboard: React.FC = () => {
         const header = cols.join(',');
         const rows = applications.map((app) =>
           cols.map((col) => {
-            const val = (app as Record<string, string>)[col] || '';
+            const val = (app as unknown as Record<string, string>)[col] || '';
             return val.includes(',') || val.includes('"') ? `"${val.replace(/"/g, '""')}"` : val;
           }).join(',')
         );

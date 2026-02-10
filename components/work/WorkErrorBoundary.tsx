@@ -1,16 +1,19 @@
-import React from 'react';
+import React, { Component, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface Props {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 interface State {
   hasError: boolean;
 }
 
-class WorkErrorBoundary extends React.Component<Props, State> {
-  state: State = { hasError: false };
+export default class WorkErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
   static getDerivedStateFromError(): State {
     return { hasError: true };
@@ -20,7 +23,7 @@ class WorkErrorBoundary extends React.Component<Props, State> {
     console.error('Work module error:', error, info.componentStack);
   }
 
-  render(): React.ReactNode {
+  render(): ReactNode {
     if (this.state.hasError) {
       return (
         <div className="min-h-[60vh] flex items-center justify-center px-6">
@@ -49,5 +52,3 @@ class WorkErrorBoundary extends React.Component<Props, State> {
     return this.props.children;
   }
 }
-
-export default WorkErrorBoundary;

@@ -75,7 +75,6 @@ const StatusPage: React.FC = () => {
           app_id: trimmedId,
           status: 'NEW',
           company_id: 'silverlight-research',
-          role_id: 'global-setter',
           role_title: 'Remote Appointment Setter (Global)',
           timestamp: new Date().toISOString(),
           last_updated: new Date().toISOString(),

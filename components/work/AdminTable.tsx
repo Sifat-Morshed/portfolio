@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronDown, ChevronUp, Search, Download, ExternalLink, Play, Filter, FileDown, Phone, Mail, Globe, User, Trash2, CheckSquare, Square, Send, Loader2, FileText } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, Download, ExternalLink, Play, Filter, FileDown, Phone, Mail, Globe, User, Trash2, CheckSquare, Square, Send, Loader2, FileText, Check } from 'lucide-react';
 import type { ApplicationRow, ApplicationStatus } from '../../src/lib/work/types';
 
 interface AdminTableProps {
@@ -251,8 +251,8 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
 
     // Sort
     data.sort((a, b) => {
-      const aVal = (a as Record<string, string>)[sortField] || '';
-      const bVal = (b as Record<string, string>)[sortField] || '';
+      const aVal = (a as unknown as Record<string, string>)[sortField] || '';
+      const bVal = (b as unknown as Record<string, string>)[sortField] || '';
       const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
       return sortDir === 'asc' ? cmp : -cmp;
     });
