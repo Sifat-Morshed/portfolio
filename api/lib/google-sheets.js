@@ -326,3 +326,172 @@ export async function exportApplicationsCSV() {
   );
   return [header, ...rows].join('\n');
 }
+
+// ─── Blocked Countries Management ─────────────────────────────────────────────
+
+export async function getBlockedCountries() {
+  const config = getConfig();
+  const token = await getAccessToken();
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/BlockedCountries!A:A`;
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to fetch blocked countries: ${error}`);
+  }
+
+  const data = await res.json();
+  const rows = data.values || [];
+  
+  // Skip header row if it exists
+  const dataRows = rows.length > 0 && rows[0][0] === 'country' ? rows.slice(1) : rows;
+  
+  return dataRows.map(row => row[0]).filter(Boolean);
+}
+
+export async function updateBlockedCountries(countries) {
+  const config = getConfig();
+  const token = await getAccessToken();
+
+  // First, clear existing data
+  const clearUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/BlockedCountries!A:A:clear`;
+  await fetch(clearUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  // Then append header + countries
+  const values = [['country'], ...countries.map(c => [c])];
+  
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/BlockedCountries!A1:append?valueInputOption=USER_ENTERED&insertDataOption=OVERWRITE`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ values }),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to update blocked countries: ${error}`);
+  }
+}
+
+// ─── Interested Applicants Management ─────────────────────────────────────────
+
+const INTERESTED_COLUMNS = [
+  'timestamp', 'email', 'full_name', 'country', 'company_id', 'role_id', 'role_title'
+];
+
+export async function addInterestedApplicant(data) {
+  const config = getConfig();
+  const token = await getAccessToken();
+  const values = INTERESTED_COLUMNS.map((col) => data[col] || '');
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/InterestedApplicants!A:G:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ values: [values] }),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to add interested applicant: ${error}`);
+  }
+}
+
+export async function getAllInterestedApplicants() {
+  const config = getConfig();
+  const token = await getAccessToken();
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/InterestedApplicants!A:G`;
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to fetch interested applicants: ${error}`);
+  }
+
+  const data = await res.json();
+  const rows = data.values || [];
+
+  const dataRows = rows.length > 0 && rows[0][0] === 'timestamp' ? rows.slice(1) : rows;
+
+  return dataRows.map((row) => {
+    const obj = {};
+    INTERESTED_COLUMNS.forEach((col, i) => {
+      obj[col] = row[i] || '';
+    });
+    return obj;
+  });
+}
+
+export async function deleteInterestedApplicant(email) {
+  const config = getConfig();
+  const token = await getAccessToken();
+
+  const allUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/InterestedApplicants!B:B`;
+  const allRes = await fetch(allUrl, { headers: { Authorization: `Bearer ${token}` } });
+  const allData = await allRes.json();
+  const emails = allData.values || [];
+
+  let rowIndex = -1;
+  for (let i = 0; i < emails.length; i++) {
+    if (emails[i][0] === email) {
+      rowIndex = i;
+      break;
+    }
+  }
+
+  if (rowIndex === -1) {
+    throw new Error(`Interested applicant ${email} not found`);
+  }
+
+  // Get the sheet's numeric ID
+  const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}?fields=sheets.properties`;
+  const metaRes = await fetch(metaUrl, { headers: { Authorization: `Bearer ${token}` } });
+  const metaData = await metaRes.json();
+  const sheet = metaData.sheets?.find((s) => s.properties?.title === 'InterestedApplicants');
+  const numericSheetId = sheet?.properties?.sheetId ?? 0;
+
+  const deleteUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}:batchUpdate`;
+  const deleteRes = await fetch(deleteUrl, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requests: [{
+        deleteDimension: {
+          range: {
+            sheetId: numericSheetId,
+            dimension: 'ROWS',
+            startIndex: rowIndex,
+            endIndex: rowIndex + 1,
+          },
+        },
+      }],
+    }),
+  });
+
+  if (!deleteRes.ok) {
+    const error = await deleteRes.text();
+    throw new Error(`Failed to delete interested applicant: ${error}`);
+  }
+}

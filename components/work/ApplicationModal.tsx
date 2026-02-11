@@ -15,7 +15,7 @@ interface ApplicationModalProps {
   onSignIn: () => void;
 }
 
-type Step = 'auth' | 'identity' | 'blacklist' | 'audio' | 'success';
+type Step = 'country' | 'auth' | 'identity' | 'blacklist' | 'audio' | 'success' | 'blocked';
 
 const COUNTRIES = getCountryOptions();
 
@@ -27,7 +27,9 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
   session,
   onSignIn,
 }) => {
-  const [step, setStep] = useState<Step>(session ? 'identity' : 'auth');
+  const [step, setStep] = useState<Step>('country');
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [isCheckingCountry, setIsCheckingCountry] = useState(false);
   const [fullName, setFullName] = useState(session?.user?.name || '');
   const [email, setEmail] = useState(session?.user?.email || '');
   const [phone, setPhone] = useState('');
@@ -40,8 +42,16 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
   const [appId, setAppId] = useState('');
   const [duplicateInfo, setDuplicateInfo] = useState<{ id: string; name: string; role: string; date: string } | null>(null);
   const [error, setError] = useState('');
+  const [isStoringInterest, setIsStoringInterest] = useState(false);
 
   const { devMode, devSignIn, isGsiLoaded } = useAuth();
+
+  // Reset to country selection when modal opens
+  useEffect(() => {
+    if (isOpen && !selectedCountry) {
+      setStep('country');
+    }
+  }, [isOpen, selectedCountry]);
 
   // If session arrives (user signed in), advance past auth
   useEffect(() => {
@@ -53,12 +63,102 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
   }, [session, step]);
 
   const handleClose = useCallback(() => {
-    setStep(session ? 'identity' : 'auth');
+    setStep('country');
+    setSelectedCountry('');
     setError('');
+    setIsStoringInterest(false);
     onClose();
-  }, [session, onClose]);
+  }, [onClose]);
 
   if (!isOpen) return null;
+
+  const handleCountrySelect = async () => {
+    if (!selectedCountry) {
+      setError('Please select your country');
+      return;
+    }
+
+    setError('');
+    setIsCheckingCountry(true);
+
+    try {
+      // Dev mode: skip country check
+      if (devMode) {
+        setNationality(selectedCountry);
+        setStep(session ? 'identity' : 'auth');
+        setIsCheckingCountry(false);
+        return;
+      }
+
+      const res = await fetch(`/api/work/check-country?country=${encodeURIComponent(selectedCountry)}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to check country');
+      }
+
+      if (data.blocked) {
+        setStep('blocked');
+      } else {
+        setNationality(selectedCountry);
+        setStep(session ? 'identity' : 'auth');
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to verify country';
+      setError(message);
+    } finally {
+      setIsCheckingCountry(false);
+    }
+  };
+
+  const handleStoreInterest = async () => {
+    setError('');
+
+    if (!session?.user?.email) {
+      setError('Please sign in with Google first to save your interest');
+      return;
+    }
+
+    setIsStoringInterest(true);
+
+    try {
+      // Dev mode: simulate success
+      if (devMode) {
+        await new Promise((r) => setTimeout(r, 800));
+        setError('');
+        alert('✓ We\'ll email you when we start accepting applications from your country!');
+        handleClose();
+        return;
+      }
+
+      const res = await fetch('/api/work/check-country', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: session.user.email,
+          full_name: session.user.name || '',
+          country: selectedCountry,
+          company_id: company.companyId,
+          role_id: role.roleId,
+          role_title: role.title,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save your interest');
+      }
+
+      alert('✓ Got it! We\'ll email you when we start accepting applications from your country.');
+      handleClose();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to save your interest';
+      setError(message);
+    } finally {
+      setIsStoringInterest(false);
+    }
+  };
 
   const handleCvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -162,8 +262,15 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
   };
 
   // Step indicator
-  const steps = ['Sign In', 'Details', 'Compliance', 'Upload'];
-  const stepIndex = step === 'auth' ? 0 : step === 'identity' ? 1 : step === 'blacklist' ? 2 : step === 'audio' ? 3 : 4;
+  const steps = step === 'country' || step === 'blocked' 
+    ? ['Country', 'Sign In', 'Details', 'Compliance', 'Upload']
+    : ['Sign In', 'Details', 'Compliance', 'Upload'];
+  const stepIndex = 
+    step === 'country' ? 0 :
+    step === 'auth' ? (steps.length === 5 ? 1 : 0) : 
+    step === 'identity' ? (steps.length === 5 ? 2 : 1) : 
+    step === 'blacklist' ? (steps.length === 5 ? 3 : 2) : 
+    step === 'audio' ? (steps.length === 5 ? 4 : 3) : 5;
 
   return (
     <div className="fixed inset-0 z-[200]" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '2rem 1rem 1rem' }}>
@@ -179,7 +286,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 rounded-t-2xl" style={{ flexShrink: 0 }}>
           <div>
             <h2 className="text-lg font-display font-bold text-white">
-              {step === 'success' ? 'You\'re In!' : `Apply: ${role.title}`}
+              {step === 'success' ? 'You\'re In!' : step === 'blocked' ? 'Not Available Yet' : `Apply: ${role.title}`}
             </h2>
             <p className="text-xs text-slate-500">{company.name}</p>
           </div>
@@ -189,7 +296,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
         </div>
 
         {/* Progress Steps */}
-        {step !== 'success' && (
+        {step !== 'success' && step !== 'blocked' && (
           <div className="px-6 pt-4 pb-2 flex items-center gap-1" style={{ flexShrink: 0 }}>
             {steps.map((s, i) => (
               <React.Fragment key={s}>
@@ -211,6 +318,121 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
 
         {/* Scrollable content area — takes all remaining space */}
         <div className="p-6 space-y-5" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }} data-lenis-prevent>
+          {/* Step: Country Selection */}
+          {step === 'country' && (
+            <div className="space-y-5">
+              <div className="text-center py-4">
+                <p className="text-slate-300 mb-2">First, let us know where you're from</p>
+                <p className="text-xs text-slate-500">We'll check if we're currently accepting applications from your country</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Select Your Country</label>
+                <select
+                  value={selectedCountry}
+                  onChange={(e) => setSelectedCountry(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                >
+                  <option value="">Choose a country...</option>
+                  {COUNTRIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-300">
+                  {error}
+                </div>
+              )}
+
+              <button
+                onClick={handleCountrySelect}
+                disabled={isCheckingCountry || !selectedCountry}
+                className="w-full px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isCheckingCountry ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>Checking...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Continue</span>
+                    <ChevronRight size={18} />
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Step: Blocked Country */}
+          {step === 'blocked' && (
+            <div className="space-y-5 text-center py-8">
+              <div className="w-16 h-16 bg-amber-500/20 border-2 border-amber-500/40 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle size={32} className="text-amber-400" />
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold text-white mb-3">Not Accepting Applications Right Now</h3>
+                <p className="text-slate-300 mb-2">
+                  We're currently not hiring from <strong className="text-white">{selectedCountry}</strong> for this position.
+                </p>
+                <p className="text-sm text-slate-400">
+                  But don't worry — we'd love to notify you when positions open up in your region!
+                </p>
+              </div>
+
+              {!session ? (
+                <div className="bg-white/5 border border-white/10 rounded-lg p-6 space-y-4">
+                  <p className="text-sm text-slate-300">Sign in with Google to get notified automatically</p>
+                  <GoogleSignInButton label="Sign in to Get Notified" />
+                </div>
+              ) : (
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-6 space-y-4">
+                  <div className="flex items-center justify-center gap-2 text-primary">
+                    <CheckCircle size={20} />
+                    <span className="text-sm font-medium">Signed in as {session.user.email}</span>
+                  </div>
+
+                  {error && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-300">
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleStoreInterest}
+                    disabled={isStoringInterest}
+                    className="w-full px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isStoringInterest ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <span>Notify Me When Open</span>
+                    )}
+                  </button>
+
+                  <p className="text-xs text-slate-500">
+                    We'll email you at <strong className="text-slate-400">{session.user.email}</strong> when we start accepting applications from your country
+                  </p>
+                </div>
+              )}
+
+              <button
+                onClick={handleClose}
+                className="text-slate-400 hover:text-white transition-colors text-sm underline"
+              >
+                Close
+              </button>
+            </div>
+          )}
+
           {/* Step: Auth */}
           {step === 'auth' && (
             <div className="text-center py-8">

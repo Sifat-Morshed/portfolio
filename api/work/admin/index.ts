@@ -62,14 +62,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const action = (req.query.action as string) || '';
 
   switch (action) {
-    case 'list':          return handleList(req, res);
-    case 'update':        return handleUpdate(req, res);
-    case 'delete':        return handleDelete(req, res);
-    case 'bulk-delete':   return handleBulkDelete(req, res);
-    case 'export':        return handleExport(req, res);
-    case 'send-email':    return handleSendEmail(req, res);
-    case 'manual-log':    return handleManualLog(req, res);
-    case 'self-destruct': return handleSelfDestruct(req, res);
+    case 'list':               return handleList(req, res);
+    case 'update':             return handleUpdate(req, res);
+    case 'delete':             return handleDelete(req, res);
+    case 'bulk-delete':        return handleBulkDelete(req, res);
+    case 'export':             return handleExport(req, res);
+    case 'send-email':         return handleSendEmail(req, res);
+    case 'manual-log':         return handleManualLog(req, res);
+    case 'self-destruct':      return handleSelfDestruct(req, res);
+    case 'get-blocked':        return handleGetBlockedCountries(req, res);
+    case 'update-blocked':     return handleUpdateBlockedCountries(req, res);
+    case 'list-interested':    return handleListInterested(req, res);
+    case 'notify-interested':  return handleNotifyInterested(req, res);
     default:
       return res.status(400).json({ error: `Unknown action: ${action}` });
   }
@@ -554,5 +558,148 @@ async function handleSelfDestruct(req: VercelRequest, res: VercelResponse) {
     console.error('Self-destruct error:', error);
     const message = error instanceof Error ? error.message : 'Self-destruct failed';
     return res.status(500).json({ error: message });
+  }
+}
+
+// ─── BLOCKED COUNTRIES ─────────────────────────────────────────────────────────
+
+async function handleGetBlockedCountries(_req: VercelRequest, res: VercelResponse) {
+  try {
+    const blocked = await (sheets as any).getBlockedCountries();
+    return res.status(200).json({ countries: blocked });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Get blocked countries error:', message, error);
+    return res.status(500).json({ error: 'Failed to fetch blocked countries', detail: message });
+  }
+}
+
+async function handleUpdateBlockedCountries(req: VercelRequest, res: VercelResponse) {
+  try {
+    const { countries } = req.body;
+    if (!Array.isArray(countries)) {
+      return res.status(400).json({ error: 'countries must be an array' });
+    }
+    await (sheets as any).updateBlockedCountries(countries);
+    return res.status(200).json({ success: true });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Update blocked countries error:', message, error);
+    return res.status(500).json({ error: 'Failed to update blocked countries', detail: message });
+  }
+}
+
+// ─── INTERESTED APPLICANTS ─────────────────────────────────────────────────────
+
+async function handleListInterested(_req: VercelRequest, res: VercelResponse) {
+  try {
+    const interested = await (sheets as any).getAllInterestedApplicants();
+    return res.status(200).json(interested);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('List interested applicants error:', message, error);
+    return res.status(500).json({ error: 'Failed to fetch interested applicants', detail: message });
+  }
+}
+
+async function handleNotifyInterested(req: VercelRequest, res: VercelResponse) {
+  try {
+    const { emails, role_title, role_id, company_id } = req.body;
+    
+    if (!Array.isArray(emails) || emails.length === 0) {
+      return res.status(400).json({ error: 'emails must be a non-empty array' });
+    }
+    
+    if (!role_title || !role_id || !company_id) {
+      return res.status(400).json({ error: 'Missing role details' });
+    }
+
+    if (!canSendEmail()) {
+      return res.status(429).json({ error: 'Email limit reached for today (80 max)' });
+    }
+
+    if (!process.env.EMAIL_SERVER_HOST || !process.env.EMAIL_SERVER_USER || !process.env.EMAIL_SERVER_PASSWORD) {
+      return res.status(500).json({ error: 'Email server not configured' });
+    }
+
+    const nodemailer = await import('nodemailer');
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_SERVER_HOST,
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.EMAIL_SERVER_USER,
+        pass: process.env.EMAIL_SERVER_PASSWORD,
+      },
+    });
+
+    const siteUrl = process.env.SITE_URL || 'https://sifat-there.vercel.app';
+    const applyUrl = `${siteUrl}/work`;
+
+    const sent: string[] = [];
+    const failed: string[] = [];
+
+    for (const email of emails) {
+      try {
+        const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Position Now Open</title></head>
+<body style="margin:0;padding:0;background-color:#050505;font-family:system-ui,-apple-system,sans-serif;">
+<div style="max-width:560px;margin:40px auto;padding:0 20px;">
+<div style="background:linear-gradient(135deg,#0A0A0B 0%,#0f0f10 100%);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:32px;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+<div style="text-align:center;margin-bottom:24px;">
+<div style="display:inline-block;background:linear-gradient(135deg,#06b6d4,#0891b2);padding:12px 24px;border-radius:12px;margin-bottom:16px;">
+<h1 style="margin:0;font-size:24px;font-weight:800;color:white;letter-spacing:-0.5px;">✨ Great News!</h1>
+</div>
+<p style="color:#94a3b8;font-size:14px;margin:8px 0 0;">We're Hiring Again</p>
+</div>
+
+<div style="background:rgba(6,182,212,0.05);border:1px solid rgba(6,182,212,0.15);border-radius:12px;padding:20px;margin:24px 0;">
+<h2 style="margin:0 0 8px;color:#06b6d4;font-size:18px;font-weight:700;">${role_title}</h2>
+<p style="margin:0;color:#cbd5e1;font-size:14px;line-height:1.6;">
+You previously showed interest in working with us, but we weren't accepting applications from your country at the time.
+</p>
+</div>
+
+<p style="color:#e2e8f0;font-size:15px;line-height:1.7;margin:20px 0;">
+Good news — <strong style="color:white;">applications are now open</strong> for your region! This position is still available, and we'd love to see your application.
+</p>
+
+<div style="text-align:center;margin:32px 0;">
+<a href="${applyUrl}" style="display:inline-block;background:linear-gradient(135deg,#06b6d4,#0891b2);color:white;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;box-shadow:0 4px 16px rgba(6,182,212,0.3);transition:transform 0.2s;">
+Apply Now →
+</a>
+</div>
+
+<div style="border-top:1px solid rgba(255,255,255,0.06);margin-top:28px;padding-top:20px;color:#64748b;font-size:12px;line-height:1.6;">
+<p style="margin:0 0 8px;"><strong style="color:#94a3b8;">Sifat Morshed</strong> | Independent Contractor</p>
+<p style="margin:0;">Recruiting for: ${company_id === 'silverlight-research' ? 'Silverlight Research' : company_id}</p>
+</div>
+</div>
+</div>
+</body>
+</html>`;
+
+        await transporter.sendMail({
+          from: `"Sifat Morshed" <${process.env.EMAIL_SERVER_USER}>`,
+          to: email,
+          subject: `Now Hiring: ${role_title}`,
+          html,
+        });
+
+        sent.push(email);
+        trackEmailSent();
+      } catch (e) {
+        console.error(`Failed to send to ${email}:`, e);
+        failed.push(email);
+      }
+    }
+
+    return res.status(200).json({ success: true, sent: sent.length, failed: failed.length, sentTo: sent, failedTo: failed });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Notify interested error:', message, error);
+    return res.status(500).json({ error: 'Failed to send notifications', detail: message });
   }
 }

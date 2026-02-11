@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Loader2, ShieldCheck, LogOut, RefreshCw, ExternalLink, DollarSign, Users, Send, AlertTriangle, Skull, UserPlus, FileText } from 'lucide-react';
+import { Loader2, ShieldCheck, LogOut, RefreshCw, ExternalLink, DollarSign, Users, Send, AlertTriangle, Skull, UserPlus, FileText, X } from 'lucide-react';
 import { useAuth } from '../../src/lib/work/AuthContext';
 import AdminTable from './AdminTable';
 import type { ApplicationRow, ApplicationStatus } from '../../src/lib/work/types';
+import { getCountryOptions } from '../../src/lib/work/countries';
 
 const DEV_MODE = !import.meta.env.VITE_GOOGLE_CLIENT_ID && import.meta.env.DEV;
 
@@ -123,6 +124,7 @@ const AdminDashboard: React.FC = () => {
   const [applications, setApplications] = useState<ApplicationRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState<'applications' | 'countries' | 'interested'>('applications');
 
   const fetchApplications = useCallback(async () => {
     if (!user?.email) return;
@@ -394,6 +396,40 @@ const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Tabs Navigation */}
+      <div className="flex gap-2 mb-6 border-b border-white/10 pb-2">
+        <button
+          onClick={() => setActiveTab('applications')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'applications'
+              ? 'bg-primary/10 border border-primary/20 text-primary'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          Applications
+        </button>
+        <button
+          onClick={() => setActiveTab('countries')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'countries'
+              ? 'bg-primary/10 border border-primary/20 text-primary'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          Country Blocking
+        </button>
+        <button
+          onClick={() => setActiveTab('interested')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'interested'
+              ? 'bg-primary/10 border border-primary/20 text-primary'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          Interested Applicants
+        </button>
+      </div>
+
       {/* Content */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
@@ -411,6 +447,8 @@ const AdminDashboard: React.FC = () => {
         </div>
       ) : (
         <>
+        {activeTab === 'applications' && (
+          <>
         {/* Earnings / Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
@@ -452,6 +490,12 @@ const AdminDashboard: React.FC = () => {
 
         {/* Manual Email Sender */}
         <ManualEmailSender userEmail={user?.email || ''} />
+          </>
+        )}
+
+        {activeTab === 'countries' && <BlockedCountriesManager userEmail={user?.email || ''} />}
+
+        {activeTab === 'interested' && <InterestedApplicantsManager userEmail={user?.email || ''} />}
         </>
       )}
     </div>
@@ -942,6 +986,397 @@ const SelfDestructButton: React.FC<{ userEmail: string }> = ({ userEmail }) => {
         </div>
       )}
     </>
+  );
+};
+
+// ─── Blocked Countries Manager ─────────────────────────────────────────────────
+
+const BlockedCountriesManager: React.FC<{ userEmail: string }> = ({ userEmail }) => {
+  const [blockedCountries, setBlockedCountries] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState('');
+
+  const COUNTRIES = getCountryOptions();
+
+  useEffect(() => {
+    fetchBlockedCountries();
+  }, []);
+
+  const fetchBlockedCountries = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/work/admin?action=get-blocked', {
+        headers: { Authorization: `Bearer ${userEmail}` },
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to fetch blocked countries');
+      }
+
+      const data = await res.json();
+      setBlockedCountries(data.countries || []);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load blocked countries';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddCountry = async () => {
+    if (!selectedCountry) return;
+    if (blockedCountries.includes(selectedCountry)) {
+      alert('This country is already blocked');
+      return;
+    }
+
+    const updated = [...blockedCountries, selectedCountry].sort();
+    await saveBlockedCountries(updated);
+    setSelectedCountry('');
+  };
+
+  const handleRemoveCountry = async (country: string) => {
+    const updated = blockedCountries.filter(c => c !== country);
+    await saveBlockedCountries(updated);
+  };
+
+  const saveBlockedCountries = async (countries: string[]) => {
+    setIsSaving(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/work/admin?action=update-blocked', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userEmail}`,
+        },
+        body: JSON.stringify({ countries }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to update blocked countries');
+      }
+
+      setBlockedCountries(countries);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to save changes';
+      setError(message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 size={32} className="text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+        <h2 className="text-lg font-bold text-white mb-2">Country Blocking</h2>
+        <p className="text-sm text-slate-400 mb-6">
+          Block applications from specific countries. Users from blocked countries will be saved to the "Interested Applicants" list and notified when positions reopen.
+        </p>
+
+        {error && (
+          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-300 mb-4">
+            {error}
+          </div>
+        )}
+
+        <div className="flex gap-3 mb-6">
+          <select
+            value={selectedCountry}
+            onChange={(e) => setSelectedCountry(e.target.value)}
+            className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+            disabled={isSaving}
+          >
+            <option value="">Select a country to block...</option>
+            {COUNTRIES.filter(c => !blockedCountries.includes(c)).map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleAddCountry}
+            disabled={!selectedCountry || isSaving}
+            className="px-6 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg font-medium hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : 'Block Country'}
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium text-slate-300 mb-3">
+            Blocked Countries ({blockedCountries.length})
+          </h3>
+          {blockedCountries.length === 0 ? (
+            <p className="text-sm text-slate-500">No countries blocked. All countries can apply.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {blockedCountries.map((country) => (
+                <div
+                  key={country}
+                  className="flex items-center justify-between px-4 py-3 bg-red-500/5 border border-red-500/20 rounded-lg"
+                >
+                  <span className="text-sm text-white">{country}</span>
+                  <button
+                    onClick={() => handleRemoveCountry(country)}
+                    disabled={isSaving}
+                    className="text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Interested Applicants Manager ────────────────────────────────────────────
+
+interface InterestedApplicant {
+  timestamp: string;
+  email: string;
+  full_name: string;
+  country: string;
+  company_id: string;
+  role_id: string;
+  role_title: string;
+}
+
+const InterestedApplicantsManager: React.FC<{ userEmail: string }> = ({ userEmail }) => {
+  const [interested, setInterested] = useState<InterestedApplicant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [isSending, setIsSending] = useState(false);
+  const [selectedRole, setSelectedRole] = useState('global-setter');
+
+  const ROLE_OPTIONS = [
+    { id: 'global-setter', title: 'Remote Appointment Setter (Global)', company: 'silverlight-research' },
+    { id: 'bosnian-specialist', title: 'Senior Sales Specialist (Bosnia Exclusive)', company: 'silverlight-research' },
+  ];
+
+  useEffect(() => {
+    fetchInterested();
+  }, []);
+
+  const fetchInterested = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/work/admin?action=list-interested', {
+        headers: { Authorization: `Bearer ${userEmail}` },
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to fetch interested applicants');
+      }
+
+      const data = await res.json();
+      setInterested(data);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load interested applicants';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selected.size === interested.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(interested.map(a => a.email)));
+    }
+  };
+
+  const handleToggle = (email: string) => {
+    const newSelected = new Set(selected);
+    if (newSelected.has(email)) {
+      newSelected.delete(email);
+    } else {
+      newSelected.add(email);
+    }
+    setSelected(newSelected);
+  };
+
+  const handleNotifySelected = async () => {
+    if (selected.size === 0) {
+      alert('Please select at least one applicant');
+      return;
+    }
+
+    const role = ROLE_OPTIONS.find(r => r.id === selectedRole) || ROLE_OPTIONS[0];
+
+    if (!confirm(`Send reopening notification to ${selected.size} applicant(s) for "${role.title}"?`)) {
+      return;
+    }
+
+    setIsSending(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/work/admin?action=notify-interested', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${userEmail}`,
+        },
+        body: JSON.stringify({
+          emails: Array.from(selected),
+          role_title: role.title,
+          role_id: role.id,
+          company_id: role.company,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to send notifications');
+      }
+
+      const data = await res.json();
+      alert(`✓ Sent ${data.sent} email(s). ${data.failed > 0 ? `${data.failed} failed.` : ''}`);
+      setSelected(new Set());
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to send notifications';
+      setError(message);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 size={32} className="text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+        <h2 className="text-lg font-bold text-white mb-2">Interested Applicants</h2>
+        <p className="text-sm text-slate-400 mb-6">
+          People who wanted to apply but were blocked by country restrictions. Notify them when positions reopen.
+        </p>
+
+        {error && (
+          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-300 mb-4">
+            {error}
+          </div>
+        )}
+
+        {interested.length === 0 ? (
+          <p className="text-sm text-slate-500 text-center py-12">
+            No interested applicants yet. When users try to apply from blocked countries, they'll be listed here.
+          </p>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/10">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handleSelectAll}
+                  className="text-sm text-primary hover:text-primary/80 transition-colors"
+                >
+                  {selected.size === interested.length ? 'Deselect All' : 'Select All'}
+                </button>
+                <span className="text-sm text-slate-400">
+                  {selected.size} of {interested.length} selected
+                </span>
+              </div>
+
+              {selected.size > 0 && (
+                <div className="flex items-center gap-3">
+                  <select
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                    className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    disabled={isSending}
+                  >
+                    {ROLE_OPTIONS.map((r) => (
+                      <option key={r.id} value={r.id}>{r.title}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleNotifySelected}
+                    disabled={isSending}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary/20 border border-primary/30 text-primary rounded-lg font-medium hover:bg-primary/30 transition-colors disabled:opacity-50"
+                  >
+                    {isSending ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Sending...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} />
+                        <span>Notify Selected</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              {interested.map((app) => (
+                <div
+                  key={app.email}
+                  className="flex items-center gap-4 px-4 py-3 bg-white/[0.02] border border-white/5 rounded-lg hover:border-white/10 transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected.has(app.email)}
+                    onChange={() => handleToggle(app.email)}
+                    className="w-4 h-4 rounded border-white/20 text-primary focus:ring-primary focus:ring-offset-0"
+                  />
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <div>
+                      <p className="text-sm font-medium text-white">{app.full_name || 'No name'}</p>
+                      <p className="text-xs text-slate-500">{app.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Country</p>
+                      <p className="text-sm text-slate-300">{app.country}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Interested In</p>
+                      <p className="text-sm text-slate-300">{app.role_title || 'Unknown role'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Date</p>
+                      <p className="text-sm text-slate-300">
+                        {app.timestamp ? new Date(app.timestamp).toLocaleDateString() : '—'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 };
 
