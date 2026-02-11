@@ -10,6 +10,77 @@ function getConfig() {
   };
 }
 
+// Helper to ensure a sheet exists, create it if not
+async function ensureSheetExists(sheetId, token, sheetName, headers) {
+  try {
+    // Get all sheets in the spreadsheet
+    const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`;
+    const metaRes = await fetch(metaUrl, { headers: { Authorization: `Bearer ${token}` } });
+    const metaData = await metaRes.json();
+    
+    const existingSheet = metaData.sheets?.find((s) => s.properties?.title === sheetName);
+    
+    if (existingSheet) {
+      // Sheet exists, check if it has headers
+      const dataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!A1:Z1`;
+      const dataRes = await fetch(dataUrl, { headers: { Authorization: `Bearer ${token}` } });
+      const dataData = await dataRes.json();
+      
+      // If no data or first row doesn't match headers, add headers
+      if (!dataData.values || dataData.values.length === 0 || dataData.values[0][0] !== headers[0]) {
+        const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+        await fetch(updateUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ values: [headers] }),
+        });
+      }
+      return;
+    }
+
+    // Sheet doesn't exist, create it
+    const createUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`;
+    const createRes = await fetch(createUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        requests: [{
+          addSheet: {
+            properties: {
+              title: sheetName,
+            },
+          },
+        }],
+      }),
+    });
+
+    if (!createRes.ok) {
+      const error = await createRes.text();
+      throw new Error(`Failed to create sheet ${sheetName}: ${error}`);
+    }
+
+    // Add headers
+    const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+    await fetch(updateUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ values: [headers] }),
+    });
+  } catch (error) {
+    console.error(`Error ensuring sheet ${sheetName} exists:`, error);
+    throw error;
+  }
+}
+
 async function getAccessToken() {
   const config = getConfig();
   const now = Math.floor(Date.now() / 1000);
@@ -333,6 +404,9 @@ export async function getBlockedCountries() {
   const config = getConfig();
   const token = await getAccessToken();
 
+  // Ensure the sheet exists
+  await ensureSheetExists(config.sheetId, token, 'BlockedCountries', ['country']);
+
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/BlockedCountries!A:A`;
 
   const res = await fetch(url, {
@@ -356,6 +430,9 @@ export async function getBlockedCountries() {
 export async function updateBlockedCountries(countries) {
   const config = getConfig();
   const token = await getAccessToken();
+
+  // Ensure the sheet exists
+  await ensureSheetExists(config.sheetId, token, 'BlockedCountries', ['country']);
 
   // First, clear existing data
   const clearUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/BlockedCountries!A:A:clear`;
@@ -396,6 +473,10 @@ const INTERESTED_COLUMNS = [
 export async function addInterestedApplicant(data) {
   const config = getConfig();
   const token = await getAccessToken();
+
+  // Ensure the sheet exists
+  await ensureSheetExists(config.sheetId, token, 'InterestedApplicants', INTERESTED_COLUMNS);
+
   const values = INTERESTED_COLUMNS.map((col) => data[col] || '');
 
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/InterestedApplicants!A:G:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
@@ -418,6 +499,9 @@ export async function addInterestedApplicant(data) {
 export async function getAllInterestedApplicants() {
   const config = getConfig();
   const token = await getAccessToken();
+
+  // Ensure the sheet exists
+  await ensureSheetExists(config.sheetId, token, 'InterestedApplicants', INTERESTED_COLUMNS);
 
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/InterestedApplicants!A:G`;
 
