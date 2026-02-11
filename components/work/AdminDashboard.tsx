@@ -1099,12 +1099,12 @@ const BlockedCountriesManager: React.FC<{ userEmail: string }> = ({ userEmail })
           <select
             value={selectedCountry}
             onChange={(e) => setSelectedCountry(e.target.value)}
-            className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none cursor-pointer"
             disabled={isSaving}
           >
-            <option value="">Select a country to block...</option>
+            <option value="" className="bg-[#0A0A0B] text-white">Select a country to block...</option>
             {COUNTRIES.filter(c => !blockedCountries.includes(c)).map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c} className="bg-[#0A0A0B] text-white">{c}</option>
             ))}
           </select>
           <button
@@ -1310,11 +1310,11 @@ const InterestedApplicantsManager: React.FC<{ userEmail: string }> = ({ userEmai
                   <select
                     value={selectedRole}
                     onChange={(e) => setSelectedRole(e.target.value)}
-                    className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none cursor-pointer"
                     disabled={isSending}
                   >
                     {ROLE_OPTIONS.map((r) => (
-                      <option key={r.id} value={r.id}>{r.title}</option>
+                      <option key={r.id} value={r.id} className="bg-[#0A0A0B] text-white">{r.title}</option>
                     ))}
                   </select>
                   <button

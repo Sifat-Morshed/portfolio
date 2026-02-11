@@ -331,11 +331,11 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
                 <select
                   value={selectedCountry}
                   onChange={(e) => setSelectedCountry(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary appearance-none cursor-pointer"
                 >
-                  <option value="">Choose a country...</option>
+                  <option value="" className="bg-[#0A0A0B] text-white">Choose a country...</option>
                   {COUNTRIES.map((c) => (
-                    <option key={c} value={c}>
+                    <option key={c} value={c} className="bg-[#0A0A0B] text-white">
                       {c}
                     </option>
                   ))}
@@ -514,12 +514,12 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
                     onChange={(e) => setNationality(e.target.value)}
                     className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:border-primary focus:outline-none transition-colors appearance-none cursor-pointer"
                   >
-                    <option value="" className="bg-[#0A0A0B]">Select country...</option>
+                    <option value="" className="bg-[#0A0A0B] text-white">Select country...</option>
                     {COUNTRIES.map((c) =>
                       c === '---' ? (
-                        <option key="sep" disabled className="bg-[#0A0A0B]">──────────────</option>
+                        <option key="sep" disabled className="bg-[#0A0A0B] text-slate-500">──────────────</option>
                       ) : (
-                        <option key={c} value={c} className="bg-[#0A0A0B]">{c}</option>
+                        <option key={c} value={c} className="bg-[#0A0A0B] text-white">{c}</option>
                       )
                     )}
                   </select>
