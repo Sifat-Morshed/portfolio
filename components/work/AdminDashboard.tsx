@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Loader2, ShieldCheck, LogOut, RefreshCw, ExternalLink, DollarSign, Users, Send, AlertTriangle, Skull, UserPlus, FileText, X } from 'lucide-react';
+import { Loader2, ShieldCheck, LogOut, RefreshCw, ExternalLink, DollarSign, Users, Send, AlertTriangle, Skull, UserPlus, FileText, X, Filter, Briefcase, Layout } from 'lucide-react';
 import { useAuth } from '../../src/lib/work/AuthContext';
 import AdminTable from './AdminTable';
 import type { ApplicationRow, ApplicationStatus } from '../../src/lib/work/types';
 import { getCountryOptions } from '../../src/lib/work/countries';
+import { COMPANIES } from '../../src/lib/work/opportunities';
+import JobPostingsManager from './JobPostingsManager';
+import PortfolioCMS from './PortfolioCMS';
 
 const DEV_MODE = !import.meta.env.VITE_GOOGLE_CLIENT_ID && import.meta.env.DEV;
 
@@ -124,7 +127,8 @@ const AdminDashboard: React.FC = () => {
   const [applications, setApplications] = useState<ApplicationRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'applications' | 'countries' | 'interested'>('applications');
+  const [activeTab, setActiveTab] = useState<'applications' | 'countries' | 'interested' | 'jobs' | 'portfolio'>('applications');
+  const [statsFilter, setStatsFilter] = useState<string>('all'); // 'all', 'company:id', or 'role:company:id'
 
   const fetchApplications = useCallback(async () => {
     if (!user?.email) return;
@@ -325,12 +329,28 @@ const AdminDashboard: React.FC = () => {
   };
 
   // Calculate earnings stats: workers who have been hired for >= 7 days
-  const earningsStats = (() => {
+  const filteredApplications = useMemo(() => {
+    if (statsFilter === 'all') return applications;
+    
+    if (statsFilter.startsWith('company:')) {
+      const companyId = statsFilter.split(':')[1];
+      return applications.filter(app => app.company_id === companyId);
+    }
+    
+    if (statsFilter.startsWith('role:')) {
+      const [, companyId, roleId] = statsFilter.split(':');
+      return applications.filter(app => app.company_id === companyId && app.role_id === roleId);
+    }
+    
+    return applications;
+  }, [applications, statsFilter]);
+
+  const earningsStats = useMemo(() => {
     const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-    const hiredApps = applications.filter((a) => a.status === 'HIRED' && a.started_date);
+    const hiredApps = filteredApplications.filter((a) => a.status === 'HIRED' && a.started_date);
     const activeWorkers = hiredApps.filter((a) => (Date.now() - new Date(a.started_date!).getTime()) >= sevenDaysMs);
     return { totalHired: hiredApps.length, activeWorkers: activeWorkers.length };
-  })();
+  }, [filteredApplications]);
 
   if (authLoading) {
     return (
@@ -428,6 +448,28 @@ const AdminDashboard: React.FC = () => {
         >
           Interested Applicants
         </button>
+        <button
+          onClick={() => setActiveTab('jobs')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'jobs'
+              ? 'bg-primary/10 border border-primary/20 text-primary'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <Briefcase size={14} className="inline mr-1" />
+          Manage Jobs
+        </button>
+        <button
+          onClick={() => setActiveTab('portfolio')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'portfolio'
+              ? 'bg-primary/10 border border-primary/20 text-primary'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <Layout size={14} className="inline mr-1" />
+          Portfolio CMS
+        </button>
       </div>
 
       {/* Content */}
@@ -449,11 +491,48 @@ const AdminDashboard: React.FC = () => {
         <>
         {activeTab === 'applications' && (
           <>
+        {/* Stats Filter Dropdown */}
+        <div className="mb-4">
+          <div className="flex items-center gap-3">
+            <Filter size={16} className="text-primary" />
+            <label htmlFor="stats-filter" className="text-sm font-medium text-slate-300">
+              Filter Stats:
+            </label>
+            <select
+              id="stats-filter"
+              value={statsFilter}
+              onChange={(e) => setStatsFilter(e.target.value)}
+              className="bg-[#0A0A0B] text-white border border-white/10 rounded-lg px-3 py-2 text-sm appearance-none cursor-pointer hover:border-primary/30 transition-colors"
+            >
+              <option value="all" className="bg-[#0A0A0B] text-white">All Applications</option>
+              {COMPANIES.map((company) => (
+                <optgroup key={company.companyId} label={`── ${company.name} ──`} className="bg-[#0A0A0B] text-slate-400">
+                  <option value={`company:${company.companyId}`} className="bg-[#0A0A0B] text-white pl-4">
+                    📊 All {company.name} Roles
+                  </option>
+                  {company.roles.map((role) => (
+                    <option 
+                      key={`${company.companyId}:${role.roleId}`} 
+                      value={`role:${company.companyId}:${role.roleId}`}
+                      className="bg-[#0A0A0B] text-white pl-8"
+                    >
+                      └─ {role.title}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            <span className="text-xs text-slate-500">
+              ({filteredApplications.length} {filteredApplications.length === 1 ? 'application' : 'applications'} matching filter)
+            </span>
+          </div>
+        </div>
+
         {/* Earnings / Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
             <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Total Applications</p>
-            <p className="text-2xl font-bold text-white">{applications.length}</p>
+            <p className="text-2xl font-bold text-white">{filteredApplications.length}</p>
           </div>
           <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
             <div className="flex items-center gap-1.5 mb-1">
@@ -472,7 +551,7 @@ const AdminDashboard: React.FC = () => {
           </div>
           <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4">
             <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Rejection Rate</p>
-            <p className="text-2xl font-bold text-slate-300">{applications.length ? Math.round((applications.filter(a => a.status === 'REJECTED').length / applications.length) * 100) : 0}%</p>
+            <p className="text-2xl font-bold text-slate-300">{filteredApplications.length ? Math.round((filteredApplications.filter(a => a.status === 'REJECTED').length / filteredApplications.length) * 100) : 0}%</p>
           </div>
         </div>
 
@@ -496,6 +575,10 @@ const AdminDashboard: React.FC = () => {
         {activeTab === 'countries' && <BlockedCountriesManager userEmail={user?.email || ''} />}
 
         {activeTab === 'interested' && <InterestedApplicantsManager userEmail={user?.email || ''} />}
+
+        {activeTab === 'jobs' && <JobPostingsManager userEmail={user?.email || ''} />}
+
+        {activeTab === 'portfolio' && <PortfolioCMS userEmail={user?.email || ''} />}
         </>
       )}
     </div>

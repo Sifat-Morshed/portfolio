@@ -579,3 +579,237 @@ export async function deleteInterestedApplicant(email) {
     throw new Error(`Failed to delete interested applicant: ${error}`);
   }
 }
+
+// ================== Job Postings Management ==================
+
+const JOB_POSTINGS_COLUMNS = [
+  'company_id',
+  'company_name',
+  'company_tagline',
+  'company_description',
+  'company_industry',
+  'role_id',
+  'role_title',
+  'role_type',
+  'salary_usd',
+  'salary_bdt',
+  'bosnian_only',
+  'tags',
+  'short_description',
+  'full_description',
+  'requirements',
+  'perks',
+  'created_at',
+  'updated_at'
+];
+
+export async function getAllJobPostings() {
+  const config = getConfig();
+  const token = await getAccessToken();
+
+  // Ensure the sheet exists
+  await ensureSheetExists(config.sheetId, token, 'JobPostings', JOB_POSTINGS_COLUMNS);
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A:R`;
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to fetch job postings: ${error}`);
+  }
+
+  const data = await res.json();
+  const rows = data.values || [];
+
+  const dataRows = rows.length > 0 && rows[0][0] === 'company_id' ? rows.slice(1) : rows;
+
+  return dataRows.map((row) => {
+    const obj = {};
+    JOB_POSTINGS_COLUMNS.forEach((col, i) => {
+      obj[col] = row[i] || '';
+    });
+    return obj;
+  });
+}
+
+export async function createJobPosting(jobData) {
+  const config = getConfig();
+  const token = await getAccessToken();
+
+  // Ensure the sheet exists
+  await ensureSheetExists(config.sheetId, token, 'JobPostings', JOB_POSTINGS_COLUMNS);
+
+  const now = new Date().toISOString();
+
+  const row = [
+    jobData.company_id || '',
+    jobData.company_name || '',
+    jobData.company_tagline || '',
+    jobData.company_description || '',
+    jobData.company_industry || '',
+    jobData.role_id || '',
+    jobData.role_title || '',
+    jobData.role_type || '',
+    jobData.salary_usd || '',
+    jobData.salary_bdt || '',
+    jobData.bosnian_only || 'false',
+    jobData.tags || '', // comma-separated or JSON string
+    jobData.short_description || '',
+    jobData.full_description || '',
+    jobData.requirements || '', // comma-separated or JSON string
+    jobData.perks || '', // comma-separated or JSON string
+    now,
+    now
+  ];
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A:R:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ values: [row] }),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to create job posting: ${error}`);
+  }
+
+  return { success: true, message: 'Job posting created' };
+}
+
+export async function updateJobPosting(companyId, roleId, updates) {
+  const config = getConfig();
+  const token = await getAccessToken();
+
+  // Find the row index
+  const allUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A:F`;
+  const allRes = await fetch(allUrl, { headers: { Authorization: `Bearer ${token}` } });
+  const allData = await allRes.json();
+  const rows = allData.values || [];
+
+  let rowIndex = -1;
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i][0] === companyId && rows[i][5] === roleId) {
+      rowIndex = i + 1; // +1 because sheets are 1-indexed
+      break;
+    }
+  }
+
+  if (rowIndex === -1) {
+    throw new Error(`Job posting ${companyId}/${roleId} not found`);
+  }
+
+  // Get current row data
+  const currentRowUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A${rowIndex}:R${rowIndex}`;
+  const currentRes = await fetch(currentRowUrl, { headers: { Authorization: `Bearer ${token}` } });
+  const currentData = await currentRes.json();
+  const currentRow = currentData.values?.[0] || [];
+
+  // Build updated row
+  const updatedRow = [...currentRow];
+  const columnMap = {
+    company_name: 1,
+    company_tagline: 2,
+    company_description: 3,
+    company_industry: 4,
+    role_title: 6,
+    role_type: 7,
+    salary_usd: 8,
+    salary_bdt: 9,
+    bosnian_only: 10,
+    tags: 11,
+    short_description: 12,
+    full_description: 13,
+    requirements: 14,
+    perks: 15,
+  };
+
+  Object.keys(updates).forEach((key) => {
+    if (columnMap[key] !== undefined) {
+      updatedRow[columnMap[key]] = updates[key];
+    }
+  });
+
+  // Update timestamp
+  updatedRow[17] = new Date().toISOString();
+
+  const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A${rowIndex}:R${rowIndex}?valueInputOption=USER_ENTERED`;
+  const updateRes = await fetch(updateUrl, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ values: [updatedRow] }),
+  });
+
+  if (!updateRes.ok) {
+    const error = await updateRes.text();
+    throw new Error(`Failed to update job posting: ${error}`);
+  }
+
+  return { success: true, message: 'Job posting updated' };
+}
+
+export async function deleteJobPosting(companyId, roleId) {
+  const config = getConfig();
+  const token = await getAccessToken();
+
+  // Find the row index
+  const allUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A:F`;
+  const allRes = await fetch(allUrl, { headers: { Authorization: `Bearer ${token}` } });
+  const allData = await allRes.json();
+  const rows = allData.values || [];
+
+  let rowIndex = -1;
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i][0] === companyId && rows[i][5] === roleId) {
+      rowIndex = i;
+      break;
+    }
+  }
+
+  if (rowIndex === -1) {
+    throw new Error(`Job posting ${companyId}/${roleId} not found`);
+  }
+
+  // Get the sheet's numeric ID
+  const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}?fields=sheets.properties`;
+  const metaRes = await fetch(metaUrl, { headers: { Authorization: `Bearer ${token}` } });
+  const metaData = await metaRes.json();
+  const sheet = metaData.sheets?.find((s) => s.properties?.title === 'JobPostings');
+  const numericSheetId = sheet?.properties?.sheetId ?? 0;
+
+  const deleteUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}:batchUpdate`;
+  const deleteRes = await fetch(deleteUrl, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      requests: [{
+        deleteDimension: {
+          range: {
+            sheetId: numericSheetId,
+            dimension: 'ROWS',
+            startIndex: rowIndex,
+            endIndex: rowIndex + 1,
+          },
+        },
+      }],
+    }),
+  });
+
+  if (!deleteRes.ok) {
+    const error = await deleteRes.text();
+    throw new Error(`Failed to delete job posting: ${error}`);
+  }
+
+  return { success: true, message: 'Job posting deleted' };
+}
+

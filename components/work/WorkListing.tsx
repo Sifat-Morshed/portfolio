@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Phone, DollarSign, ArrowRight, Users, Globe, TrendingUp, Clock, ChevronDown } from 'lucide-react';
+import { Phone, DollarSign, ArrowRight, Users, Globe, TrendingUp, Clock, ChevronDown, AlertCircle } from 'lucide-react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { COMPANIES } from '../../src/lib/work/opportunities';
@@ -103,10 +103,32 @@ const WorkListing: React.FC = () => {
   const [shiftStart] = useState(9);
   const [shiftEnd] = useState(18);
   const [showTzPicker, setShowTzPicker] = useState(false);
+  const [blockedCountries, setBlockedCountries] = useState<string[]>([]);
+  const [loadingBlocked, setLoadingBlocked] = useState(true);
 
   useEffect(() => {
     const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     setSelectedTz(detectedTz);
+  }, []);
+
+  useEffect(() => {
+    // Fetch blocked countries
+    const fetchBlockedCountries = async () => {
+      try {
+        const response = await fetch('/api/work/check-country');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.blockedCountries && Array.isArray(data.blockedCountries)) {
+            setBlockedCountries(data.blockedCountries.filter((c: string) => c.trim() !== ''));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch blocked countries:', error);
+      } finally {
+        setLoadingBlocked(false);
+      }
+    };
+    fetchBlockedCountries();
   }, []);
 
   useEffect(() => {
@@ -355,6 +377,38 @@ const WorkListing: React.FC = () => {
           <p className="text-[10px] text-slate-600 mt-4 text-center">Shift times are tentative and may vary based on role. Select a different timezone above to compare.</p>
         </div>
       </div>
+
+      {/* Blocked Countries Notice */}
+      {!loadingBlocked && blockedCountries.length > 0 && (
+        <div className="mb-16 md:mb-20 p-px rounded-2xl bg-gradient-to-b from-red-500/20 to-transparent">
+          <div className="bg-surface rounded-2xl p-6 md:p-8">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+                <AlertCircle size={16} className="text-red-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-display font-bold text-white mb-2">Application Restrictions</h3>
+                <p className="text-sm text-slate-300 mb-3">
+                  We are currently not accepting applications from the following {blockedCountries.length === 1 ? 'country' : 'countries'}:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {blockedCountries.map((country) => (
+                    <span
+                      key={country}
+                      className="text-xs font-semibold uppercase tracking-wider text-red-400 bg-red-500/10 px-3 py-1.5 rounded-full border border-red-500/30"
+                    >
+                      {country}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500 mt-3">
+                  If you're located in one of these regions, your application will be automatically declined. This restriction is temporary and subject to change.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Companies Section */}
       <div id="companies" className="company-grid">

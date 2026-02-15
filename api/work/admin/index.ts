@@ -74,6 +74,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     case 'update-blocked':     return handleUpdateBlockedCountries(req, res);
     case 'list-interested':    return handleListInterested(req, res);
     case 'notify-interested':  return handleNotifyInterested(req, res);
+    case 'list-jobs':          return handleListJobs(req, res);
+    case 'create-job':         return handleCreateJob(req, res);
+    case 'update-job':         return handleUpdateJob(req, res);
+    case 'delete-job':         return handleDeleteJob(req, res);
     default:
       return res.status(400).json({ error: `Unknown action: ${action}` });
   }
@@ -703,3 +707,65 @@ Apply Now →
     return res.status(500).json({ error: 'Failed to send notifications', detail: message });
   }
 }
+
+// ─── JOB POSTINGS MANAGEMENT ───────────────────────────────────────────────────
+
+async function handleListJobs(_req: VercelRequest, res: VercelResponse) {
+  try {
+    const jobs = await (sheets as any).getAllJobPostings();
+    return res.status(200).json(jobs);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('List jobs error:', message, error);
+    return res.status(500).json({ error: 'Failed to fetch job postings', detail: message });
+  }
+}
+
+async function handleCreateJob(req: VercelRequest, res: VercelResponse) {
+  try {
+    const jobData = req.body;
+    if (!jobData.company_id || !jobData.role_id || !jobData.role_title) {
+      return res.status(400).json({ error: 'Missing required fields: company_id, role_id, role_title' });
+    }
+    
+    const result = await (sheets as any).createJobPosting(jobData);
+    return res.status(200).json(result);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Create job error:', message, error);
+    return res.status(500).json({ error: 'Failed to create job posting', detail: message });
+  }
+}
+
+async function handleUpdateJob(req: VercelRequest, res: VercelResponse) {
+  try {
+    const { company_id, role_id, updates } = req.body;
+    if (!company_id || !role_id || !updates) {
+      return res.status(400).json({ error: 'Missing required fields: company_id, role_id, updates' });
+    }
+    
+    const result = await (sheets as any).updateJobPosting(company_id, role_id, updates);
+    return res.status(200).json(result);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Update job error:', message, error);
+    return res.status(500).json({ error: 'Failed to update job posting', detail: message });
+  }
+}
+
+async function handleDeleteJob(req: VercelRequest, res: VercelResponse) {
+  try {
+    const { company_id, role_id } = req.body;
+    if (!company_id || !role_id) {
+      return res.status(400).json({ error: 'Missing required fields: company_id, role_id' });
+    }
+    
+    const result = await (sheets as any).deleteJobPosting(company_id, role_id);
+    return res.status(200).json(result);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Delete job error:', message, error);
+    return res.status(500).json({ error: 'Failed to delete job posting', detail: message });
+  }
+}
+
