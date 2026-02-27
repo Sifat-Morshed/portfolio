@@ -105,10 +105,33 @@ const WorkListing: React.FC = () => {
   const [showTzPicker, setShowTzPicker] = useState(false);
   const [blockedCountries, setBlockedCountries] = useState<string[]>([]);
   const [loadingBlocked, setLoadingBlocked] = useState(true);
+  const [companies, setCompanies] = useState(COMPANIES);
+  const [loadingJobs, setLoadingJobs] = useState(false);
 
   useEffect(() => {
     const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     setSelectedTz(detectedTz);
+  }, []);
+
+  useEffect(() => {
+    // Fetch dynamic job postings
+    const fetchJobs = async () => {
+      setLoadingJobs(true);
+      try {
+        const response = await fetch('/api/work/jobs');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.companies && Array.isArray(data.companies) && data.companies.length > 0) {
+            setCompanies(data.companies);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch jobs, using static data:', error);
+      } finally {
+        setLoadingJobs(false);
+      }
+    };
+    fetchJobs();
   }, []);
 
   useEffect(() => {
@@ -412,7 +435,7 @@ const WorkListing: React.FC = () => {
 
       {/* Companies Section */}
       <div id="companies" className="company-grid">
-        {COMPANIES.map((company) => (
+        {companies.map((company) => (
           <div key={company.companyId} className="mb-12">
             {/* Company Header */}
             <div className="mb-8">
@@ -427,17 +450,37 @@ const WorkListing: React.FC = () => {
 
             {/* Role Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {company.roles.map((role) => (
-                <Link
+              {company.roles.map((role) => {
+                const roleHiring = role.isHiring !== false;
+                const CardWrapper = roleHiring ? Link : 'div';
+                const cardProps = roleHiring 
+                  ? { to: `/work/${company.companyId}/${role.roleId}` } 
+                  : {};
+                
+                return (
+                <CardWrapper
                   key={role.roleId}
-                  to={`/work/${company.companyId}/${role.roleId}`}
-                  className={`company-card group block p-px rounded-3xl transition-all duration-300 ${
-                    role.bosnianOnly
-                      ? 'bg-gradient-to-b from-amber-400/50 via-amber-500/20 to-transparent hover:from-amber-400/70 hover:shadow-[0_0_40px_-10px_rgba(251,191,36,0.3)]'
-                      : 'bg-gradient-to-b from-cyan-500/30 to-transparent hover:from-cyan-500/50'
+                  {...(cardProps as any)}
+                  className={`company-card group block p-px rounded-3xl transition-all duration-300 relative ${
+                    !roleHiring 
+                      ? 'grayscale opacity-60 cursor-not-allowed bg-gradient-to-b from-slate-500/20 to-transparent'
+                      : role.bosnianOnly
+                        ? 'bg-gradient-to-b from-amber-400/50 via-amber-500/20 to-transparent hover:from-amber-400/70 hover:shadow-[0_0_40px_-10px_rgba(251,191,36,0.3)]'
+                        : 'bg-gradient-to-b from-cyan-500/30 to-transparent hover:from-cyan-500/50'
                   }`}
+                  title={!roleHiring ? 'Not hiring for this role right now' : ''}
                 >
                   <div className="h-full bg-surface rounded-3xl p-6 flex flex-col">
+                    {/* Not hiring overlay */}
+                    {!roleHiring && (
+                      <div className="absolute inset-0 bg-black/40 rounded-3xl z-10 flex items-center justify-center">
+                        <div className="bg-surface/95 border border-white/10 rounded-xl px-5 py-3 text-center shadow-2xl">
+                          <p className="text-sm font-bold text-slate-300">Not hiring right now</p>
+                          <p className="text-xs text-slate-500 mt-1">Check back later for openings</p>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Role badge */}
                     <div className="flex items-center gap-2 mb-4">
                       {role.bosnianOnly ? (
@@ -483,12 +526,15 @@ const WorkListing: React.FC = () => {
                     </div>
 
                     {/* CTA */}
-                    <div className="flex items-center gap-2 text-sm font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity mt-auto">
-                      Apply Now <ArrowRight size={16} />
-                    </div>
+                    {roleHiring && (
+                      <div className="flex items-center gap-2 text-sm font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity mt-auto">
+                        Apply Now <ArrowRight size={16} />
+                      </div>
+                    )}
                   </div>
-                </Link>
-              ))}
+                </CardWrapper>
+                );
+              })}
             </div>
           </div>
         ))}

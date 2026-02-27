@@ -54,6 +54,7 @@ export interface CompanyMeta {
   tagline: string;
   description: string;
   industry: string;
+  isHiring?: boolean;
   roles: RoleMeta[];
 }
 
@@ -69,6 +70,8 @@ export interface RoleMeta {
   fullDescription: string;
   requirements: string[];
   perks: string[];
+  blockedCountries?: string[];
+  isHiring?: boolean;
 }
 
 // Priority countries shown at top of nationality dropdown

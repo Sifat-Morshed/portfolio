@@ -18,6 +18,8 @@ interface JobPosting {
   full_description: string;
   requirements: string;
   perks: string;
+  blocked_countries: string;
+  is_hiring: string;
   created_at: string;
   updated_at: string;
 }
@@ -49,6 +51,8 @@ const JobPostingsManager: React.FC<JobPostingsManagerProps> = ({ userEmail }) =>
     full_description: '',
     requirements: '',
     perks: '',
+    blocked_countries: '',
+    is_hiring: 'true',
   });
 
   const fetchJobs = async () => {
@@ -108,6 +112,8 @@ const JobPostingsManager: React.FC<JobPostingsManagerProps> = ({ userEmail }) =>
         full_description: '',
         requirements: '',
         perks: '',
+        blocked_countries: '',
+        is_hiring: 'true',
       });
       await fetchJobs();
     } catch (err) {
@@ -197,6 +203,8 @@ const JobPostingsManager: React.FC<JobPostingsManagerProps> = ({ userEmail }) =>
       full_description: '',
       requirements: '',
       perks: '',
+      blocked_countries: '',
+      is_hiring: 'true',
     });
   };
 
@@ -429,6 +437,39 @@ const JobPostingsManager: React.FC<JobPostingsManagerProps> = ({ userEmail }) =>
                   placeholder="e.g. Weekly payouts, Flexible schedule, Training provided"
                 />
               </div>
+
+              <div className="col-span-2">
+                <label className="block text-xs text-slate-400 mb-1">Blocked Countries (comma-separated)</label>
+                <input
+                  type="text"
+                  value={formData.blocked_countries || ''}
+                  onChange={(e) => setFormData({ ...formData, blocked_countries: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+                  placeholder="e.g. Bangladesh, India (leave empty to allow all countries)"
+                />
+                <p className="text-xs text-slate-500 mt-1">Applicants from these countries will be blocked for this specific job</p>
+              </div>
+
+              <div className="col-span-2">
+                <label className="block text-xs text-slate-400 mb-2">Hiring Status</label>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, is_hiring: formData.is_hiring === 'true' ? 'false' : 'true' })}
+                  className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${
+                    formData.is_hiring === 'true' ? 'bg-emerald-500' : 'bg-slate-600'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                      formData.is_hiring === 'true' ? 'translate-x-8' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className={`ml-3 text-sm font-medium ${formData.is_hiring === 'true' ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {formData.is_hiring === 'true' ? 'Actively Hiring' : 'Not Hiring'}
+                </span>
+                <p className="text-xs text-slate-500 mt-1">When disabled, this role will appear grayed out with a "Not hiring" notice on the public page</p>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/10">
@@ -460,7 +501,11 @@ const JobPostingsManager: React.FC<JobPostingsManagerProps> = ({ userEmail }) =>
           jobs.map((job) => (
             <div
               key={`${job.company_id}-${job.role_id}`}
-              className="bg-white/[0.03] border border-white/10 rounded-xl p-4"
+              className={`border rounded-xl p-4 transition-all ${
+                job.is_hiring === 'false' 
+                  ? 'bg-white/[0.01] border-white/5 opacity-60 grayscale' 
+                  : 'bg-white/[0.03] border-white/10'
+              }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -473,6 +518,15 @@ const JobPostingsManager: React.FC<JobPostingsManagerProps> = ({ userEmail }) =>
                         Bosnia Only
                       </span>
                     )}
+                    {job.is_hiring === 'false' ? (
+                      <span className="text-[10px] text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/30">
+                        Not Hiring
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                        Hiring
+                      </span>
+                    )}
                   </div>
                   <h4 className="text-base font-bold text-white mb-1">{job.role_title}</h4>
                   <p className="text-sm text-slate-400 mb-2">{job.short_description}</p>
@@ -480,9 +534,35 @@ const JobPostingsManager: React.FC<JobPostingsManagerProps> = ({ userEmail }) =>
                     <span>{job.role_type}</span>
                     {job.salary_usd && <span>• {job.salary_usd}</span>}
                     <span>• ID: {job.role_id}</span>
+                    {job.blocked_countries && <span>• 🚫 {job.blocked_countries}</span>}
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch('/api/work/admin?action=update-job', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userEmail}` },
+                          body: JSON.stringify({ company_id: job.company_id, role_id: job.role_id, updates: { is_hiring: job.is_hiring === 'false' ? 'true' : 'false' } }),
+                        });
+                        if (!res.ok) throw new Error('Failed to toggle');
+                        await fetchJobs();
+                      } catch (err) { alert('Failed to toggle hiring status'); }
+                    }}
+                    title={job.is_hiring === 'false' ? 'Enable hiring' : 'Pause hiring'}
+                    className={`p-2 border rounded-lg transition-colors ${
+                      job.is_hiring === 'false'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
+                        : 'bg-orange-500/10 text-orange-400 border-orange-500/20 hover:bg-orange-500/20'
+                    }`}
+                  >
+                    {job.is_hiring === 'false' ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                    )}
+                  </button>
                   <button
                     onClick={() => openEditForm(job)}
                     className="p-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg hover:bg-blue-500/20 transition-colors"

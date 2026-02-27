@@ -599,6 +599,8 @@ const JOB_POSTINGS_COLUMNS = [
   'full_description',
   'requirements',
   'perks',
+  'blocked_countries',
+  'is_hiring',
   'created_at',
   'updated_at'
 ];
@@ -610,7 +612,7 @@ export async function getAllJobPostings() {
   // Ensure the sheet exists
   await ensureSheetExists(config.sheetId, token, 'JobPostings', JOB_POSTINGS_COLUMNS);
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A:R`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A:T`;
 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
@@ -661,11 +663,13 @@ export async function createJobPosting(jobData) {
     jobData.full_description || '',
     jobData.requirements || '', // comma-separated or JSON string
     jobData.perks || '', // comma-separated or JSON string
+    jobData.blocked_countries || '', // comma-separated
+    jobData.is_hiring || 'true', // default to hiring
     now,
     now
   ];
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A:R:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A:T:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -707,13 +711,14 @@ export async function updateJobPosting(companyId, roleId, updates) {
   }
 
   // Get current row data
-  const currentRowUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A${rowIndex}:R${rowIndex}`;
+  const currentRowUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A${rowIndex}:T${rowIndex}`;
   const currentRes = await fetch(currentRowUrl, { headers: { Authorization: `Bearer ${token}` } });
   const currentData = await currentRes.json();
   const currentRow = currentData.values?.[0] || [];
 
-  // Build updated row
+  // Build updated row - pad to 20 columns
   const updatedRow = [...currentRow];
+  while (updatedRow.length < 20) updatedRow.push('');
   const columnMap = {
     company_name: 1,
     company_tagline: 2,
@@ -729,6 +734,8 @@ export async function updateJobPosting(companyId, roleId, updates) {
     full_description: 13,
     requirements: 14,
     perks: 15,
+    blocked_countries: 16,
+    is_hiring: 17,
   };
 
   Object.keys(updates).forEach((key) => {
@@ -738,9 +745,9 @@ export async function updateJobPosting(companyId, roleId, updates) {
   });
 
   // Update timestamp
-  updatedRow[17] = new Date().toISOString();
+  updatedRow[19] = new Date().toISOString();
 
-  const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A${rowIndex}:R${rowIndex}?valueInputOption=USER_ENTERED`;
+  const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A${rowIndex}:T${rowIndex}?valueInputOption=USER_ENTERED`;
   const updateRes = await fetch(updateUrl, {
     method: 'PUT',
     headers: {

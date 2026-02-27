@@ -90,6 +90,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
         return;
       }
 
+      // Check global blocked countries
       const res = await fetch(`/api/work/check-country?country=${encodeURIComponent(selectedCountry)}`);
       const data = await res.json();
 
@@ -97,12 +98,26 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({
         throw new Error(data.error || 'Failed to check country');
       }
 
+      // Check if blocked globally
       if (data.blocked) {
         setStep('blocked');
-      } else {
-        setNationality(selectedCountry);
-        setStep(session ? 'identity' : 'auth');
+        return;
       }
+
+      // Check if blocked for this specific job
+      if (role.blockedCountries && role.blockedCountries.length > 0) {
+        const isJobBlocked = role.blockedCountries.some(
+          (c) => c.trim().toLowerCase() === selectedCountry.toLowerCase()
+        );
+        if (isJobBlocked) {
+          setStep('blocked');
+          return;
+        }
+      }
+
+      // Not blocked, proceed
+      setNationality(selectedCountry);
+      setStep(session ? 'identity' : 'auth');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to verify country';
       setError(message);

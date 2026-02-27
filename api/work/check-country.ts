@@ -19,17 +19,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method === 'GET') {
-    // Check if country is blocked
+    // Check if country is blocked OR return all blocked countries
     try {
       const { country } = req.query;
-      if (!country || typeof country !== 'string') {
-        return res.status(400).json({ error: 'Missing country parameter' });
+      
+      const blockedCountries = await (sheets as any).getBlockedCountries();
+
+      // If country param provided, check single country
+      if (country && typeof country === 'string') {
+        const isBlocked = blockedCountries.includes(country);
+        return res.status(200).json({ blocked: isBlocked });
       }
 
-      const blockedCountries = await (sheets as any).getBlockedCountries();
-      const isBlocked = blockedCountries.includes(country);
-
-      return res.status(200).json({ blocked: isBlocked });
+      // No country param, return all blocked countries for frontend notice
+      return res.status(200).json({ blockedCountries });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.error('Check country error:', message, error);
