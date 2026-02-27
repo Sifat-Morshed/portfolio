@@ -1,116 +1,117 @@
-import React, { useLayoutEffect, useRef, useState, useEffect } from 'react';
+import React, { useLayoutEffect, useRef, useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Phone, DollarSign, ArrowRight, Users, Globe, TrendingUp, Clock, ChevronDown, AlertCircle } from 'lucide-react';
+import { Phone, DollarSign, ArrowRight, Users, Globe, TrendingUp, Clock, ChevronDown, AlertCircle, Search } from 'lucide-react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { COMPANIES } from '../../src/lib/work/opportunities';
 
 gsap.registerPlugin(ScrollTrigger);
 
-// Major timezone suggestions grouped by region
-const TIMEZONE_SUGGESTIONS: { region: string; zones: { label: string; tz: string }[] }[] = [
+// Comprehensive timezone list grouped by region (GoHighLevel-style)
+const TIMEZONE_DATA: { region: string; zones: { label: string; tz: string; offset: string }[] }[] = [
   {
     region: 'United Kingdom',
-    zones: [{ label: 'London (GMT/BST)', tz: 'Europe/London' }],
+    zones: [
+      { label: 'London', tz: 'Europe/London', offset: 'GMT/BST' },
+    ],
   },
   {
     region: 'United States',
     zones: [
-      { label: 'Eastern (New York)', tz: 'America/New_York' },
-      { label: 'Central (Chicago)', tz: 'America/Chicago' },
-      { label: 'Mountain (Denver)', tz: 'America/Denver' },
-      { label: 'Pacific (Los Angeles)', tz: 'America/Los_Angeles' },
-      { label: 'Alaska (Anchorage)', tz: 'America/Anchorage' },
-      { label: 'Hawaii (Honolulu)', tz: 'Pacific/Honolulu' },
-    ],
-  },
-  {
-    region: 'Canada',
-    zones: [
-      { label: 'Eastern (Toronto)', tz: 'America/Toronto' },
-      { label: 'Central (Winnipeg)', tz: 'America/Winnipeg' },
-      { label: 'Mountain (Edmonton)', tz: 'America/Edmonton' },
-      { label: 'Pacific (Vancouver)', tz: 'America/Vancouver' },
-      { label: 'Atlantic (Halifax)', tz: 'America/Halifax' },
-    ],
-  },
-  {
-    region: 'Australia',
-    zones: [
-      { label: 'Sydney (AEST)', tz: 'Australia/Sydney' },
-      { label: 'Melbourne (AEST)', tz: 'Australia/Melbourne' },
-      { label: 'Brisbane (AEST)', tz: 'Australia/Brisbane' },
-      { label: 'Perth (AWST)', tz: 'Australia/Perth' },
-      { label: 'Adelaide (ACST)', tz: 'Australia/Adelaide' },
-    ],
-  },
-  {
-    region: 'Asia',
-    zones: [
-      { label: 'Dubai (GST)', tz: 'Asia/Dubai' },
-      { label: 'Dhaka (BST)', tz: 'Asia/Dhaka' },
-      { label: 'Kolkata (IST)', tz: 'Asia/Kolkata' },
-      { label: 'Singapore (SGT)', tz: 'Asia/Singapore' },
-      { label: 'Tokyo (JST)', tz: 'Asia/Tokyo' },
-      { label: 'Shanghai (CST)', tz: 'Asia/Shanghai' },
-      { label: 'Manila (PHT)', tz: 'Asia/Manila' },
-      { label: 'Jakarta (WIB)', tz: 'Asia/Jakarta' },
-      { label: 'Karachi (PKT)', tz: 'Asia/Karachi' },
+      { label: 'New York (Eastern)', tz: 'America/New_York', offset: 'EST/EDT' },
+      { label: 'Chicago (Central)', tz: 'America/Chicago', offset: 'CST/CDT' },
+      { label: 'Denver (Mountain)', tz: 'America/Denver', offset: 'MST/MDT' },
+      { label: 'Los Angeles (Pacific)', tz: 'America/Los_Angeles', offset: 'PST/PDT' },
+      { label: 'Anchorage (Alaska)', tz: 'America/Anchorage', offset: 'AKST' },
+      { label: 'Honolulu (Hawaii)', tz: 'Pacific/Honolulu', offset: 'HST' },
     ],
   },
   {
     region: 'Europe',
     zones: [
-      { label: 'Paris (CET)', tz: 'Europe/Paris' },
-      { label: 'Berlin (CET)', tz: 'Europe/Berlin' },
-      { label: 'Moscow (MSK)', tz: 'Europe/Moscow' },
-      { label: 'Istanbul (TRT)', tz: 'Europe/Istanbul' },
-      { label: 'Athens (EET)', tz: 'Europe/Athens' },
-      { label: 'Warsaw (CET)', tz: 'Europe/Warsaw' },
-      { label: 'Sarajevo (CET)', tz: 'Europe/Sarajevo' },
+      { label: 'Paris', tz: 'Europe/Paris', offset: 'CET' },
+      { label: 'Berlin', tz: 'Europe/Berlin', offset: 'CET' },
+      { label: 'Sarajevo', tz: 'Europe/Sarajevo', offset: 'CET' },
+      { label: 'Moscow', tz: 'Europe/Moscow', offset: 'MSK' },
+      { label: 'Istanbul', tz: 'Europe/Istanbul', offset: 'TRT' },
+      { label: 'Athens', tz: 'Europe/Athens', offset: 'EET' },
+      { label: 'Warsaw', tz: 'Europe/Warsaw', offset: 'CET' },
+      { label: 'Lisbon', tz: 'Europe/Lisbon', offset: 'WET' },
     ],
   },
   {
-    region: 'Africa',
+    region: 'Asia',
     zones: [
-      { label: 'Cairo (EET)', tz: 'Africa/Cairo' },
-      { label: 'Lagos (WAT)', tz: 'Africa/Lagos' },
-      { label: 'Johannesburg (SAST)', tz: 'Africa/Johannesburg' },
-      { label: 'Nairobi (EAT)', tz: 'Africa/Nairobi' },
+      { label: 'Dubai', tz: 'Asia/Dubai', offset: 'GST' },
+      { label: 'Dhaka', tz: 'Asia/Dhaka', offset: 'BST' },
+      { label: 'Kolkata (India)', tz: 'Asia/Kolkata', offset: 'IST' },
+      { label: 'Singapore', tz: 'Asia/Singapore', offset: 'SGT' },
+      { label: 'Tokyo', tz: 'Asia/Tokyo', offset: 'JST' },
+      { label: 'Shanghai', tz: 'Asia/Shanghai', offset: 'CST' },
+      { label: 'Manila', tz: 'Asia/Manila', offset: 'PHT' },
+      { label: 'Jakarta', tz: 'Asia/Jakarta', offset: 'WIB' },
+      { label: 'Karachi', tz: 'Asia/Karachi', offset: 'PKT' },
+      { label: 'Seoul', tz: 'Asia/Seoul', offset: 'KST' },
+      { label: 'Bangkok', tz: 'Asia/Bangkok', offset: 'ICT' },
     ],
   },
   {
     region: 'Americas',
     zones: [
-      { label: 'Mexico City (CST)', tz: 'America/Mexico_City' },
-      { label: 'Bogota (COT)', tz: 'America/Bogota' },
-      { label: 'Sao Paulo (BRT)', tz: 'America/Sao_Paulo' },
-      { label: 'Buenos Aires (ART)', tz: 'America/Argentina/Buenos_Aires' },
-      { label: 'Lima (PET)', tz: 'America/Lima' },
+      { label: 'Toronto', tz: 'America/Toronto', offset: 'EST/EDT' },
+      { label: 'Vancouver', tz: 'America/Vancouver', offset: 'PST/PDT' },
+      { label: 'Mexico City', tz: 'America/Mexico_City', offset: 'CST' },
+      { label: 'Bogota', tz: 'America/Bogota', offset: 'COT' },
+      { label: 'Sao Paulo', tz: 'America/Sao_Paulo', offset: 'BRT' },
+      { label: 'Buenos Aires', tz: 'America/Argentina/Buenos_Aires', offset: 'ART' },
+      { label: 'Lima', tz: 'America/Lima', offset: 'PET' },
+    ],
+  },
+  {
+    region: 'Australia & Pacific',
+    zones: [
+      { label: 'Sydney', tz: 'Australia/Sydney', offset: 'AEST' },
+      { label: 'Melbourne', tz: 'Australia/Melbourne', offset: 'AEST' },
+      { label: 'Brisbane', tz: 'Australia/Brisbane', offset: 'AEST' },
+      { label: 'Perth', tz: 'Australia/Perth', offset: 'AWST' },
+      { label: 'Auckland', tz: 'Pacific/Auckland', offset: 'NZST' },
+    ],
+  },
+  {
+    region: 'Africa & Middle East',
+    zones: [
+      { label: 'Cairo', tz: 'Africa/Cairo', offset: 'EET' },
+      { label: 'Lagos', tz: 'Africa/Lagos', offset: 'WAT' },
+      { label: 'Johannesburg', tz: 'Africa/Johannesburg', offset: 'SAST' },
+      { label: 'Nairobi', tz: 'Africa/Nairobi', offset: 'EAT' },
     ],
   },
 ];
+
+// Flat list for search
+const ALL_ZONES = TIMEZONE_DATA.flatMap(g => g.zones);
 
 const WorkListing: React.FC = () => {
   const comp = useRef<HTMLDivElement>(null);
 
   // Timezone converter state
-  const [selectedTz, setSelectedTz] = useState('');
-  const [ukTime, setUkTime] = useState('');
-  const [localTime, setLocalTime] = useState('');
-  const [ukSeconds, setUkSeconds] = useState('');
-  const [localSeconds, setLocalSeconds] = useState('');
-  const [shiftStart] = useState(9);
-  const [shiftEnd] = useState(18);
+  const [homeTz, setHomeTz] = useState(''); // user's auto-detected timezone
+  const [workTz, setWorkTz] = useState('Europe/London'); // the country they want to check shift for
+  const [homeTime, setHomeTime] = useState('');
+  const [workTime, setWorkTime] = useState('');
+  const [homeSeconds, setHomeSeconds] = useState('');
+  const [workSeconds, setWorkSeconds] = useState('');
   const [showTzPicker, setShowTzPicker] = useState(false);
+  const [tzSearch, setTzSearch] = useState('');
   const [blockedCountries, setBlockedCountries] = useState<string[]>([]);
   const [loadingBlocked, setLoadingBlocked] = useState(true);
   const [companies, setCompanies] = useState(COMPANIES);
   const [loadingJobs, setLoadingJobs] = useState(false);
 
+  // Auto-detect user timezone
   useEffect(() => {
-    const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    setSelectedTz(detectedTz);
+    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    setHomeTz(detected);
   }, []);
 
   useEffect(() => {
@@ -142,7 +143,7 @@ const WorkListing: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           if (data.blockedCountries && Array.isArray(data.blockedCountries)) {
-            setBlockedCountries(data.blockedCountries.filter((c: string) => c.trim() !== ''));
+            setBlockedCountries(data.blockedCountries.filter((c: string) => c.trim() !== '' && c.toLowerCase() !== 'country'));
           }
         }
       } catch (error) {
@@ -154,53 +155,64 @@ const WorkListing: React.FC = () => {
     fetchBlockedCountries();
   }, []);
 
+  // Live clock update
   useEffect(() => {
-    if (!selectedTz) return;
+    if (!homeTz || !workTz) return;
 
     const updateTimes = () => {
       const now = new Date();
-      const ukFmt = new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Europe/London',
-        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
-      });
-      const localFmt = new Intl.DateTimeFormat('en-GB', {
-        timeZone: selectedTz,
-        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
-      });
-      const ukFormatted = ukFmt.format(now);
-      const localFormatted = localFmt.format(now);
-      setUkTime(ukFormatted.slice(0, -3)); // without seconds for main display
-      setLocalTime(localFormatted.slice(0, -3));
-      setUkSeconds(ukFormatted);
-      setLocalSeconds(localFormatted);
+      const fmt = (tz: string) => new Intl.DateTimeFormat('en-GB', {
+        timeZone: tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
+      }).format(now);
+      const fmtShort = (tz: string) => new Intl.DateTimeFormat('en-GB', {
+        timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: true,
+      }).format(now);
+
+      setHomeTime(fmtShort(homeTz));
+      setWorkTime(fmtShort(workTz));
+      setHomeSeconds(fmt(homeTz));
+      setWorkSeconds(fmt(workTz));
     };
     updateTimes();
-    const interval = setInterval(updateTimes, 1000); // realtime every second
+    const interval = setInterval(updateTimes, 1000);
     return () => clearInterval(interval);
-  }, [selectedTz]);
+  }, [homeTz, workTz]);
 
-  // Convert UK hours to selected timezone display
-  const getLocalShiftTime = (ukHour: number) => {
+  // Convert work country's 9-5 to user's local time
+  const getShiftInMyTime = (workHour: number) => {
     const now = new Date();
-    const ukDate = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/London' }));
-    ukDate.setHours(ukHour, 0, 0, 0);
-    const ukOffset = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/London' })).getTime();
-    const localOffset = new Date(now.toLocaleString('en-US', { timeZone: selectedTz || undefined })).getTime();
-    const diffMs = localOffset - ukOffset;
-    const localDate = new Date(ukDate.getTime() + diffMs);
+    // Create a date at the given hour in the WORK timezone
+    const workDate = new Date(now.toLocaleString('en-US', { timeZone: workTz }));
+    workDate.setHours(workHour, 0, 0, 0);
+    const workOffset = new Date(now.toLocaleString('en-US', { timeZone: workTz })).getTime();
+    const homeOffset = new Date(now.toLocaleString('en-US', { timeZone: homeTz || undefined })).getTime();
+    const diffMs = homeOffset - workOffset;
+    const localDate = new Date(workDate.getTime() + diffMs);
     return new Intl.DateTimeFormat('en-GB', {
       hour: '2-digit', minute: '2-digit', hour12: true,
     }).format(localDate);
   };
 
-  // Get a friendly name for the selected timezone
-  const getSelectedTzLabel = () => {
-    for (const group of TIMEZONE_SUGGESTIONS) {
-      const match = group.zones.find((z) => z.tz === selectedTz);
-      if (match) return match.label;
-    }
-    return selectedTz ? selectedTz.replace(/_/g, ' ').split('/').pop() : 'Detecting...';
+  // Get friendly labels
+  const getHomeTzLabel = () => {
+    const match = ALL_ZONES.find(z => z.tz === homeTz);
+    return match ? `${match.label} (${match.offset})` : homeTz ? homeTz.replace(/_/g, ' ').split('/').pop() : 'Detecting...';
   };
+
+  const getWorkTzLabel = () => {
+    const match = ALL_ZONES.find(z => z.tz === workTz);
+    return match ? `${match.label} (${match.offset})` : workTz.replace(/_/g, ' ').split('/').pop() || 'Select';
+  };
+
+  // Filtered timezones for search
+  const filteredTzData = useMemo(() => {
+    if (!tzSearch.trim()) return TIMEZONE_DATA;
+    const q = tzSearch.toLowerCase();
+    return TIMEZONE_DATA.map(g => ({
+      ...g,
+      zones: g.zones.filter(z => z.label.toLowerCase().includes(q) || z.tz.toLowerCase().includes(q) || z.offset.toLowerCase().includes(q) || g.region.toLowerCase().includes(q)),
+    })).filter(g => g.zones.length > 0);
+  }, [tzSearch]);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -318,7 +330,7 @@ const WorkListing: React.FC = () => {
         ))}
       </div>
 
-      {/* Timezone Converter Widget — Redesigned */}
+      {/* World Clock — Timezone Converter */}
       <div className="stat-item mb-16 md:mb-20 p-px rounded-2xl bg-gradient-to-b from-indigo-500/20 to-transparent">
         <div className="bg-surface rounded-2xl p-6 md:p-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
@@ -327,77 +339,95 @@ const WorkListing: React.FC = () => {
                 <Clock size={16} className="text-indigo-400" />
               </div>
               <div>
-                <h3 className="text-base font-display font-bold text-white">Work Hours - Timezone Converter</h3>
-                <p className="text-xs text-slate-500">All shifts scheduled in UK time (GMT/BST)</p>
+                <h3 className="text-base font-display font-bold text-white">World Clock</h3>
+                <p className="text-xs text-slate-500">Pick a work country → see shift hours in your local time</p>
               </div>
             </div>
 
-            {/* Timezone Selector */}
+            {/* Work Country Timezone Selector (GoHighLevel style) */}
             <div className="relative">
               <button
-                onClick={() => setShowTzPicker(!showTzPicker)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white hover:border-indigo-500/30 transition-colors"
+                onClick={() => { setShowTzPicker(!showTzPicker); setTzSearch(''); }}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white hover:border-indigo-500/30 transition-colors min-w-[220px]"
               >
-                <Globe size={14} className="text-indigo-400" />
-                <span className="truncate max-w-[200px]">{getSelectedTzLabel()}</span>
-                <ChevronDown size={14} className={`text-slate-500 transition-transform ${showTzPicker ? 'rotate-180' : ''}`} />
+                <Globe size={14} className="text-indigo-400 shrink-0" />
+                <span className="truncate">{getWorkTzLabel()}</span>
+                <ChevronDown size={14} className={`text-slate-500 transition-transform ml-auto shrink-0 ${showTzPicker ? 'rotate-180' : ''}`} />
               </button>
 
               {showTzPicker && (
-                <div className="absolute right-0 md:right-0 top-full mt-2 w-72 max-h-80 overflow-y-auto bg-[#0A0A0B] border border-white/10 rounded-xl shadow-2xl z-50">
-                  {TIMEZONE_SUGGESTIONS.map((group) => (
-                    <div key={group.region}>
-                      <p className="px-4 py-2 text-[10px] uppercase tracking-wider text-slate-600 bg-white/[0.02] sticky top-0 font-semibold">{group.region}</p>
-                      {group.zones.map((zone) => (
-                        <button
-                          key={zone.tz}
-                          onClick={() => { setSelectedTz(zone.tz); setShowTzPicker(false); }}
-                          className={`w-full text-left px-4 py-2 text-sm hover:bg-white/5 transition-colors ${selectedTz === zone.tz ? 'text-indigo-400 bg-indigo-500/5' : 'text-slate-300'}`}
-                        >
-                          {zone.label}
-                        </button>
-                      ))}
+                <div className="absolute right-0 top-full mt-2 w-80 bg-[#0A0A0B] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+                  {/* Search */}
+                  <div className="p-3 border-b border-white/5">
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <input
+                        type="text"
+                        value={tzSearch}
+                        onChange={(e) => setTzSearch(e.target.value)}
+                        placeholder="Search city or timezone..."
+                        className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/30"
+                        autoFocus
+                      />
                     </div>
-                  ))}
+                  </div>
+                  <div className="max-h-72 overflow-y-auto">
+                    {filteredTzData.map((group) => (
+                      <div key={group.region}>
+                        <p className="px-4 py-2 text-[10px] uppercase tracking-wider text-slate-600 bg-white/[0.02] sticky top-0 font-semibold">{group.region}</p>
+                        {group.zones.map((zone) => (
+                          <button
+                            key={zone.tz}
+                            onClick={() => { setWorkTz(zone.tz); setShowTzPicker(false); setTzSearch(''); }}
+                            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors flex items-center justify-between ${workTz === zone.tz ? 'text-indigo-400 bg-indigo-500/5' : 'text-slate-300'}`}
+                          >
+                            <span>{zone.label}</span>
+                            <span className="text-[10px] text-slate-600 font-mono">{zone.offset}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ))}
+                    {filteredTzData.length === 0 && (
+                      <p className="px-4 py-6 text-sm text-slate-600 text-center">No results for "{tzSearch}"</p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Time Display Grid — Bigger Boxes */}
+          {/* Time Display Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
-            {/* UK Current Time */}
+            {/* Work Country Time */}
             <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 text-center">
-              <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-3 font-semibold">UK Time Now</p>
-              <p className="text-3xl md:text-4xl font-display font-extrabold text-white tracking-tight mb-1">{ukTime || '--:--'}</p>
-              <p className="text-xs text-slate-500 font-mono">{ukSeconds || ''}</p>
-              <p className="text-[10px] text-slate-600 mt-2">Europe/London</p>
+              <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-3 font-semibold">Work Country Time</p>
+              <p className="text-3xl md:text-4xl font-display font-extrabold text-white tracking-tight mb-1">{workTime || '--:--'}</p>
+              <p className="text-xs text-slate-500 font-mono">{workSeconds || ''}</p>
+              <p className="text-[10px] text-slate-600 mt-2 truncate">{getWorkTzLabel()}</p>
             </div>
 
-            {/* Selected Timezone Current Time */}
+            {/* Your Local Time */}
             <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-6 text-center relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-primary" />
-              <p className="text-[10px] uppercase tracking-widest text-indigo-400 mb-3 font-semibold">Your Time Now</p>
-              <p className="text-3xl md:text-4xl font-display font-extrabold text-white tracking-tight mb-1">{localTime || '--:--'}</p>
-              <p className="text-xs text-indigo-400/60 font-mono">{localSeconds || ''}</p>
-              <p className="text-[10px] text-slate-600 mt-2 truncate">{getSelectedTzLabel()}</p>
+              <p className="text-[10px] uppercase tracking-widest text-indigo-400 mb-3 font-semibold">Your Local Time</p>
+              <p className="text-3xl md:text-4xl font-display font-extrabold text-white tracking-tight mb-1">{homeTime || '--:--'}</p>
+              <p className="text-xs text-indigo-400/60 font-mono">{homeSeconds || ''}</p>
+              <p className="text-[10px] text-slate-600 mt-2 truncate">{getHomeTzLabel()}</p>
             </div>
 
             {/* Tentative Shift Hours */}
             <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6 text-center relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-emerald-400" />
-              <div className="flex items-center justify-center gap-1.5 mb-3">
-                <p className="text-[10px] uppercase tracking-widest text-emerald-400 font-semibold">Tentative Shift Hours</p>
-              </div>
+              <p className="text-[10px] uppercase tracking-widest text-emerald-400 mb-3 font-semibold">Your Shift Hours</p>
               <p className="text-2xl md:text-3xl font-display font-extrabold text-white tracking-tight mb-1">
-                {selectedTz ? `${getLocalShiftTime(shiftStart)} - ${getLocalShiftTime(shiftEnd)}` : '--'}
+                {homeTz ? `${getShiftInMyTime(9)} – ${getShiftInMyTime(17)}` : '--'}
               </p>
-              <p className="text-xs text-emerald-400/50 mt-1">9:00 AM - 6:00 PM UK</p>
-              <p className="text-[10px] text-slate-600 mt-2">Converted to your timezone</p>
+              <p className="text-xs text-emerald-400/50 mt-1">9:00 AM – 5:00 PM {getWorkTzLabel()}</p>
+              <p className="text-[10px] text-slate-600 mt-2">Converted to your local time</p>
             </div>
           </div>
 
-          <p className="text-[10px] text-slate-600 mt-4 text-center">Shift times are tentative and may vary based on role. Select a different timezone above to compare.</p>
+          <p className="text-[10px] text-slate-600 mt-4 text-center">Select a different work country above to see what the 9–5 shift means in your timezone.</p>
         </div>
       </div>
 

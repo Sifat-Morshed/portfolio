@@ -424,7 +424,7 @@ export async function getBlockedCountries() {
   // Skip header row if it exists
   const dataRows = rows.length > 0 && rows[0][0] === 'country' ? rows.slice(1) : rows;
   
-  return dataRows.map(row => row[0]).filter(Boolean);
+  return dataRows.map(row => row[0]).filter(v => v && v.toLowerCase() !== 'country');
 }
 
 export async function updateBlockedCountries(countries) {

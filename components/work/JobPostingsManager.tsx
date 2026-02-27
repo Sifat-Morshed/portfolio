@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Briefcase, Plus, Edit2, Trash2, Save, X, Loader2 } from 'lucide-react';
+import { Briefcase, Plus, Edit2, Trash2, Save, X, Loader2, Upload } from 'lucide-react';
+import { COMPANIES } from '../../src/lib/work/opportunities';
 
 interface JobPosting {
   company_id: string;
@@ -494,8 +495,53 @@ const JobPostingsManager: React.FC<JobPostingsManagerProps> = ({ userEmail }) =>
       {/* Jobs List */}
       <div className="space-y-3">
         {jobs.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">
-            No job postings yet. Click "Create Job" to add one.
+          <div className="text-center py-12">
+            <p className="text-slate-500 mb-4">No job postings in sheet yet.</p>
+            <button
+              onClick={async () => {
+                if (!confirm('Import existing roles from static data into the sheet?')) return;
+                try {
+                  setLoading(true);
+                  for (const company of COMPANIES) {
+                    for (const role of company.roles) {
+                      await fetch('/api/work/admin?action=create-job', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userEmail}` },
+                        body: JSON.stringify({
+                          company_id: company.companyId,
+                          company_name: company.name,
+                          company_tagline: company.tagline,
+                          company_description: company.description,
+                          company_industry: company.industry,
+                          role_id: role.roleId,
+                          role_title: role.title,
+                          role_type: role.type,
+                          salary_usd: role.salaryUsd,
+                          salary_bdt: role.salaryBdt,
+                          bosnian_only: role.bosnianOnly ? 'true' : 'false',
+                          tags: role.tags.join(', '),
+                          short_description: role.shortDescription,
+                          full_description: role.fullDescription,
+                          requirements: role.requirements.join(', '),
+                          perks: role.perks.join(', '),
+                          is_hiring: 'true',
+                        }),
+                      });
+                    }
+                  }
+                  alert('Imported successfully');
+                  await fetchJobs();
+                } catch (err) {
+                  alert('Import failed');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2 mx-auto bg-primary/10 text-primary border border-primary/20 rounded-lg text-sm hover:bg-primary/20 transition-colors"
+            >
+              <Upload size={16} />
+              Import Existing Roles from Site
+            </button>
           </div>
         ) : (
           jobs.map((job) => (
