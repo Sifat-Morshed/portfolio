@@ -633,6 +633,9 @@ export async function getAllJobPostings() {
     JOB_POSTINGS_COLUMNS.forEach((col, i) => {
       obj[col] = row[i] || '';
     });
+    // Google Sheets converts true/false to TRUE/FALSE with USER_ENTERED — normalize
+    if (obj.is_hiring) obj.is_hiring = obj.is_hiring.toString().toLowerCase();
+    if (obj.bosnian_only) obj.bosnian_only = obj.bosnian_only.toString().toLowerCase();
     return obj;
   });
 }
@@ -669,7 +672,7 @@ export async function createJobPosting(jobData) {
     now
   ];
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A:T:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A:T:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -747,7 +750,7 @@ export async function updateJobPosting(companyId, roleId, updates) {
   // Update timestamp
   updatedRow[19] = new Date().toISOString();
 
-  const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A${rowIndex}:T${rowIndex}?valueInputOption=USER_ENTERED`;
+  const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${config.sheetId}/values/JobPostings!A${rowIndex}:T${rowIndex}?valueInputOption=RAW`;
   const updateRes = await fetch(updateUrl, {
     method: 'PUT',
     headers: {

@@ -26,27 +26,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const perks = job.perks ? job.perks.split(',').map((p: string) => p.trim()).filter(Boolean) : [];
         const blockedCountries = job.blocked_countries ? job.blocked_countries.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
 
+        const hiringVal = (job.is_hiring || '').toString().toLowerCase();
+        const isHiring = hiringVal !== 'false';
+
         return {
           companyId: job.company_id,
           name: job.company_name,
           tagline: job.company_tagline,
           description: job.company_description,
           industry: job.company_industry,
-          isHiring: job.is_hiring !== 'false', // default to true if not set
+          isHiring,
           roles: [{
             roleId: job.role_id,
             title: job.role_title,
             type: job.role_type,
             salaryUsd: job.salary_usd,
             salaryBdt: job.salary_bdt,
-            bosnianOnly: job.bosnian_only === 'true',
+            bosnianOnly: (job.bosnian_only || '').toString().toLowerCase() === 'true',
             tags,
             shortDescription: job.short_description,
             fullDescription: job.full_description,
             requirements,
             perks,
             blockedCountries,
-            isHiring: job.is_hiring !== 'false', // per-role hiring status
+            isHiring, // per-role hiring status
           }]
         };
       });
