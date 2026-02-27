@@ -292,6 +292,46 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleBulkStatusChange = async (appIds: string[], status: ApplicationStatus) => {
+    if (DEV_MODE) {
+      setApplications((prev) => {
+        const updated = prev.map((app) =>
+          appIds.includes(app.app_id)
+            ? { ...app, status, last_updated: new Date().toISOString() }
+            : app
+        );
+        try { localStorage.setItem('dev_applications', JSON.stringify(updated)); } catch { /* ignore */ }
+        return updated;
+      });
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/work/admin?action=bulk-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user?.email || ''}`,
+        },
+        body: JSON.stringify({ app_ids: appIds, status }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Bulk status update failed');
+      }
+
+      const data = await res.json();
+      if (data.failed > 0) {
+        alert(`Updated ${data.updated} of ${appIds.length}. ${data.failed} failed.`);
+      }
+
+      await fetchApplications();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to bulk update statuses');
+    }
+  };
+
   const handleBulkDelete = async (appIds: string[]) => {
     if (DEV_MODE) {
       setApplications((prev) => {
@@ -560,6 +600,7 @@ const AdminDashboard: React.FC = () => {
           onStatusChange={handleStatusChange}
           onDelete={handleDelete}
           onBulkDelete={handleBulkDelete}
+          onBulkStatusChange={handleBulkStatusChange}
           onExport={handleExport}
           userEmail={user?.email || ''}
         />

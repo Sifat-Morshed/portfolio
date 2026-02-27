@@ -66,6 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     case 'update':             return handleUpdate(req, res);
     case 'delete':             return handleDelete(req, res);
     case 'bulk-delete':        return handleBulkDelete(req, res);
+    case 'bulk-status':        return handleBulkStatus(req, res);
     case 'export':             return handleExport(req, res);
     case 'send-email':         return handleSendEmail(req, res);
     case 'manual-log':         return handleManualLog(req, res);
@@ -316,6 +317,35 @@ async function handleBulkDelete(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     console.error('Bulk delete error:', error);
     return res.status(500).json({ error: 'Failed to bulk delete applications' });
+  }
+}
+
+async function handleBulkStatus(req: VercelRequest, res: VercelResponse) {
+  try {
+    const { app_ids, status } = req.body || {};
+    if (!Array.isArray(app_ids) || app_ids.length === 0) return res.status(400).json({ error: 'app_ids must be a non-empty array' });
+    if (!status || !VALID_STATUSES.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    if (app_ids.length > 50) return res.status(400).json({ error: 'Maximum 50 updates at once' });
+
+    const results: { id: string; success: boolean; error?: string }[] = [];
+    for (const appId of app_ids) {
+      try {
+        const extraFields: Record<string, string> = {};
+        if (status === 'HIRED') extraFields.started_date = new Date().toISOString();
+        if (status === 'REJECTED') extraFields.rejection_date = new Date().toISOString();
+        await (sheets as any).updateApplicationStatus(appId, status, undefined, Object.keys(extraFields).length > 0 ? extraFields : undefined);
+        results.push({ id: appId, success: true });
+      } catch (err) {
+        results.push({ id: appId, success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+      }
+    }
+
+    const succeeded = results.filter(r => r.success).length;
+    const failed = results.filter(r => !r.success).length;
+    return res.status(200).json({ success: true, updated: succeeded, failed, details: failed > 0 ? results.filter(r => !r.success) : undefined });
+  } catch (error) {
+    console.error('Bulk status error:', error);
+    return res.status(500).json({ error: 'Failed to bulk update statuses' });
   }
 }
 

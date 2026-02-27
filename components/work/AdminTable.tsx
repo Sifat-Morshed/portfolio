@@ -7,6 +7,7 @@ interface AdminTableProps {
   onStatusChange: (appId: string, status: ApplicationStatus, notes?: string) => void;
   onDelete: (appId: string) => void;
   onBulkDelete: (appIds: string[]) => void;
+  onBulkStatusChange: (appIds: string[], status: ApplicationStatus) => void;
   onExport: () => void;
   userEmail: string;
 }
@@ -180,7 +181,7 @@ const InlineEmailSender: React.FC<{ app: ApplicationRow; userEmail: string }> = 
   );
 };
 
-const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, onDelete, onBulkDelete, onExport, userEmail }) => {
+const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, onDelete, onBulkDelete, onBulkStatusChange, onExport, userEmail }) => {
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -371,6 +372,30 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && (
             <>
+              {/* Bulk Status Update */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-slate-500">{selectedIds.size} selected →</span>
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    const val = e.target.value as ApplicationStatus;
+                    if (!val) return;
+                    if (confirm(`Change ${selectedIds.size} application(s) to ${STATUS_LABELS[val]}?`)) {
+                      onBulkStatusChange(Array.from(selectedIds), val);
+                      setSelectedIds(new Set());
+                    }
+                    e.target.value = '';
+                  }}
+                  className="px-3 py-2 bg-[#0A0A0B] border border-primary/30 rounded-lg text-sm text-primary focus:outline-none appearance-none cursor-pointer"
+                >
+                  <option value="" className="bg-[#0A0A0B] text-white">Bulk Status →</option>
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s} value={s} className="bg-[#0A0A0B] text-white">{STATUS_LABELS[s]}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Bulk Delete */}
               {confirmBulkDelete ? (
                 <div className="flex items-center gap-2">
                   <button
@@ -391,7 +416,7 @@ const AdminTable: React.FC<AdminTableProps> = ({ applications, onStatusChange, o
                   onClick={handleBulkDelete}
                   className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400 hover:bg-red-500/20 transition-colors"
                 >
-                  <Trash2 size={14} /> Delete Selected ({selectedIds.size})
+                  <Trash2 size={14} /> Delete ({selectedIds.size})
                 </button>
               )}
             </>
