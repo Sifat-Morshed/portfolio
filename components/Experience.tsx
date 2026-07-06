@@ -36,7 +36,6 @@ const Experience: React.FC = () => {
       description: "Cumulative experience across outbound sales, appointment setting, recruiting and contract research.",
       tasks: [
         "3 years total experience in outbound sales and client-facing roles.",
-        "8 months actively contributing on this site and portfolio projects.",
         "Experienced with CRM workflows, scheduling, recruiting and closing."
       ]
     },
@@ -69,6 +68,8 @@ const Experience: React.FC = () => {
       company: "21ideas LLC",
       location: "Remote",
       duration: "1 Year",
+      startDate: '2023-06-01',
+      endDate: '2024-05-31',
       description: "Recruiter & HR supporting sales and technical hiring for a B2B IT/AI services company.",
       tasks: [
         "Led full-cycle recruiting for sales and entry-level technical roles.",
@@ -81,6 +82,8 @@ const Experience: React.FC = () => {
       company: "Silverlight Research",
       location: "Remote",
       duration: "6 Months",
+      startDate: '2024-02-01',
+      endDate: '2024-07-31',
       description: "B2B contracting for lead research and outreach focused on IT and AI services.",
       tasks: [
         "Researched and verified B2B lead contact details and company eligibility.",
@@ -90,9 +93,38 @@ const Experience: React.FC = () => {
     }
   ];
 
+  // add independent Apple device reselling experience
+  experiences.unshift({
+    role: 'Independent Reseller',
+    company: 'Apple Device Reselling',
+    location: 'Independent / B2B & B2C',
+    duration: '2019 — 2026',
+    startDate: '2019-03-01',
+    endDate: '2026-04-30',
+    description: 'Independent reseller of refurbished Apple devices, handling procurement, repairs, and B2B sales to local businesses.',
+    tasks: [
+      'Sourced and refurbished Apple devices for resale.',
+      'Managed sales channels, pricing and buyer relationships.',
+      'Coordinated logistics, repairs and quality verification.'
+    ]
+  });
+
   // pull out the top summary so we can render it above the card list
   const summary = experiences.find((e) => e.role === 'Total Experience');
-  const list = experiences.filter((e) => e.role !== 'Total Experience');
+  const list = experiences
+    .filter((e) => e.role !== 'Total Experience')
+    // sort by endDate (newest first) when available
+    .sort((a, b) => {
+      const aEnd = a.endDate ? new Date(a.endDate).getTime() : 0;
+      const bEnd = b.endDate ? new Date(b.endDate).getTime() : 0;
+      return bEnd - aEnd;
+    });
+
+  const formatDate = (iso?: string) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+  };
 
   return (
     <section className="py-16 md:py-24 relative">
@@ -133,7 +165,7 @@ const Experience: React.FC = () => {
                     <p className="text-primary text-sm font-medium">{exp.role}</p>
                   </div>
                   <span className="bg-white/5 text-slate-400 text-xs font-medium px-2 py-1 rounded h-fit">
-                    {exp.duration}
+                    {exp.startDate && exp.endDate ? `${formatDate(exp.startDate)} — ${formatDate(exp.endDate)}` : exp.duration}
                   </span>
                 </div>
                 

@@ -77,9 +77,9 @@ const CvPage: React.FC = () => {
               <div className="text-sm text-slate-400 uppercase tracking-wide">Total Experience</div>
               <div className="text-2xl font-bold text-white mt-2">3 Years</div>
             </div>
-            <div className="bg-gradient-to-br from-blue-500/5 to-cyan-500/5 border border-blue-500/12 rounded-xl p-4 text-center">
-              <div className="text-sm text-slate-400 uppercase tracking-wide">Time on this site</div>
-              <div className="text-2xl font-bold text-white mt-2">8 Months</div>
+            <div className="bg-gradient-to-br from-yellow-500/5 to-orange-500/5 border border-yellow-500/12 rounded-xl p-4 text-center">
+              <div className="text-sm text-slate-400 uppercase tracking-wide">Apple Device Reselling</div>
+              <div className="text-2xl font-bold text-white mt-2">Since 2019</div>
             </div>
             <div className="bg-gradient-to-br from-emerald-500/5 to-green-500/5 border border-emerald-500/12 rounded-xl p-4 text-center">
               <div className="text-sm text-slate-400 uppercase tracking-wide">Independent Contracting</div>
@@ -98,12 +98,16 @@ const CvPage: React.FC = () => {
                   <span className="hidden md:block text-slate-600">•</span>
                   <span className="text-cyan-400 font-medium">PrimePath Home Services (Columbus, OH)</span>
                 </div>
-                <p className="text-sm text-slate-500 mb-4 font-mono">4 Months Duration</p>
+                <p className="text-sm text-slate-500 mb-4 font-mono">May 2021 — Aug 2021</p>
                 <ul className="list-disc list-inside space-y-2 text-slate-300 marker:text-cyan-400">
                   <li>Cold-called US homeowners to schedule home inspection assessments.</li>
                   <li>Qualified leads based on homeowner interest, property eligibility, and utility status.</li>
                   <li>Maintained call logs and updated CRM entries accurately.</li>
                 </ul>
+                <div className="mt-4 text-sm text-slate-400">
+                  <div className="font-medium text-slate-200">Reference</div>
+                  <div>Jennifer Simpson — Employee Services Representative, PrimePath Services</div>
+                </div>
               </div>
             </div>
 
@@ -116,10 +120,59 @@ const CvPage: React.FC = () => {
                   <span className="hidden md:block text-slate-600">•</span>
                   <span className="text-emerald-400 font-medium">BrightLeaf Solar Solutions (Walnut Creek, CA)</span>
                 </div>
-                <p className="text-sm text-slate-500 mb-4 font-mono">4 Months Duration</p>
+                <p className="text-sm text-slate-500 mb-4 font-mono">Nov 2022 — Feb 2023</p>
                 <ul className="list-disc list-inside space-y-2 text-slate-300 marker:text-emerald-400">
                   <li>Outbound calls to homeowners for solar & roof inspection appointments.</li>
                   <li>Provided daily reporting to team leader.</li>
+                </ul>
+                <div className="mt-4 text-sm text-slate-400">
+                  <div className="font-medium text-slate-200">Reference</div>
+                  <div>David Harrison — Lead Talent Acquisition Specialist & HR Generalist, BrightLeaf Solar Solutions</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        {/* Additional Jobs */}
+        <section className="mb-16">
+          <div className="relative border-l-2 border-cyan-500/30 pl-8 space-y-12">
+
+            {/* Silverlight Research */}
+            <div className="relative">
+              <div className="absolute -left-[41px] top-1 w-6 h-6 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 border-4 border-background shadow-lg shadow-yellow-500/50"></div>
+              <div className="bg-gradient-to-br from-yellow-500/5 to-orange-500/5 border border-yellow-500/20 rounded-xl p-6">
+                <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                  <h3 className="text-xl font-bold text-white">Independent Contractor</h3>
+                  <span className="hidden md:block text-slate-600">•</span>
+                  <span className="text-yellow-400 font-medium">Silverlight Research (Remote)</span>
+                </div>
+                <p className="text-sm text-slate-500 mb-4 font-mono">Feb 2024 — Jul 2024</p>
+                <ul className="list-disc list-inside space-y-2 text-slate-300 marker:text-yellow-400">
+                  <li>Researched and verified B2B lead contact details for IT/AI service buyers.</li>
+                  <li>Built outreach lists and supported pilot campaigns targeting technical stakeholders.</li>
+                </ul>
+                <div className="mt-4 text-sm text-slate-400">
+                  <div className="font-medium text-slate-200">Reference</div>
+                  <div>Karla — HR & Recruiter, Silverlight Research Center</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Apple Reselling */}
+            <div className="relative">
+              <div className="absolute -left-[41px] top-1 w-6 h-6 rounded-full bg-gradient-to-br from-indigo-400 to-blue-500 border-4 border-background shadow-lg shadow-indigo-500/50"></div>
+              <div className="bg-gradient-to-br from-indigo-500/5 to-blue-500/5 border border-indigo-500/20 rounded-xl p-6">
+                <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                  <h3 className="text-xl font-bold text-white">Independent Reseller</h3>
+                  <span className="hidden md:block text-slate-600">•</span>
+                  <span className="text-indigo-400 font-medium">Apple Device Reselling (Independent)</span>
+                </div>
+                <p className="text-sm text-slate-500 mb-4 font-mono">Mar 2019 — Apr 2026</p>
+                <ul className="list-disc list-inside space-y-2 text-slate-300 marker:text-indigo-400">
+                  <li>Sourced, refurbished and sold Apple devices to B2B and B2C buyers.</li>
+                  <li>Managed pricing, repair logistics and customer relationships.</li>
                 </ul>
               </div>
             </div>
@@ -171,7 +224,7 @@ const CvPage: React.FC = () => {
                     <span className="hidden md:block text-slate-600">•</span>
                     <span className="text-cyan-400 font-medium">21ideas LLC (Remote)</span>
                   </div>
-                  <p className="text-sm text-slate-500 mb-4 font-mono">10 Months Duration</p>
+                  <p className="text-sm text-slate-500 mb-4 font-mono">Jan 2024 — Oct 2024</p>
                   <ul className="list-disc list-inside space-y-2 text-slate-300 marker:text-cyan-400">
                     <li>Prospected and qualified leads for scheduled appointments.</li>
                     <li>Managed CRM entries and daily reporting to team leads.</li>
@@ -189,7 +242,7 @@ const CvPage: React.FC = () => {
                     <span className="hidden md:block text-slate-600">•</span>
                     <span className="text-emerald-400 font-medium">21ideas LLC (Remote)</span>
                   </div>
-                  <p className="text-sm text-slate-500 mb-4 font-mono">6 Months Duration</p>
+                  <p className="text-sm text-slate-500 mb-4 font-mono">Nov 2024 — Apr 2025</p>
                   <ul className="list-disc list-inside space-y-2 text-slate-300 marker:text-emerald-400">
                     <li>Closed qualified leads and coordinated next-step handoffs.</li>
                     <li>Handled discovery calls, pricing conversations and objections.</li>
@@ -206,7 +259,7 @@ const CvPage: React.FC = () => {
                     <span className="hidden md:block text-slate-600">•</span>
                     <span className="text-purple-400 font-medium">21ideas LLC (Remote)</span>
                   </div>
-                  <p className="text-sm text-slate-500 mb-4 font-mono">1 Year Duration</p>
+                  <p className="text-sm text-slate-500 mb-4 font-mono">Jun 2023 — May 2024</p>
                   <ul className="list-disc list-inside space-y-2 text-slate-300 marker:text-purple-400">
                     <li>Led full-cycle recruiting and onboarding for sales hires.</li>
                     <li>Managed candidate screening, assessments and payroll coordination.</li>
@@ -243,6 +296,29 @@ const CvPage: React.FC = () => {
         </div>
 
       </main>
+
+      {/* References Section */}
+      <section className="container mx-auto px-4 md:px-6 py-8 max-w-4xl">
+        <h2 className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400 uppercase tracking-widest mb-4">References</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-surfaceHighlight/30 border border-white/5 rounded-xl p-4">
+            <div className="font-bold text-white">PrimePath Home Services</div>
+            <div className="text-slate-300 text-sm">Jennifer Simpson — Employee Services Representative</div>
+          </div>
+          <div className="bg-surfaceHighlight/30 border border-white/5 rounded-xl p-4">
+            <div className="font-bold text-white">BrightLeaf Solar Solutions</div>
+            <div className="text-slate-300 text-sm">David Harrison — Lead Talent Acquisition Specialist & HR Generalist</div>
+          </div>
+          <div className="bg-surfaceHighlight/30 border border-white/5 rounded-xl p-4">
+            <div className="font-bold text-white">21ideas LLC</div>
+            <div className="text-slate-300 text-sm">PETUKHOV VLADIMIR (Denis) — Founder, 21 Ideas LLC, Florida</div>
+          </div>
+          <div className="bg-surfaceHighlight/30 border border-white/5 rounded-xl p-4">
+            <div className="font-bold text-white">Silverlight Research</div>
+            <div className="text-slate-300 text-sm">Karla — HR & Recruiter, Silverlight Research Center</div>
+          </div>
+        </div>
+      </section>
 
       <footer className="py-8 text-center text-slate-600 text-sm border-t border-white/5 bg-surfaceHighlight/20">
         <p>Generated by Sifat Morshed Portfolio System</p>
