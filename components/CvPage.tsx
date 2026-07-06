@@ -1,7 +1,7 @@
 import React from 'react';
-import { ArrowLeft, Download, Mail, Phone, MapPin, Calendar, Globe, GraduationCap, BookOpen, Book } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Phone, MapPin, Calendar, Globe } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { generateCV } from '@/utils/generatePDF';
+import { generateCV } from '../utils/generatePDF';
 
 const CvPage: React.FC = () => {
   return (
@@ -72,6 +72,21 @@ const CvPage: React.FC = () => {
             Experience
           </h2>
           
+          <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+            <div className="bg-gradient-to-br from-cyan-500/10 to-emerald-500/10 border border-cyan-500/12 rounded-xl p-4 text-center">
+              <div className="text-sm text-slate-400 uppercase tracking-wide">Total Experience</div>
+              <div className="text-2xl font-bold text-white mt-2">3 Years</div>
+            </div>
+            <div className="bg-gradient-to-br from-blue-500/5 to-cyan-500/5 border border-blue-500/12 rounded-xl p-4 text-center">
+              <div className="text-sm text-slate-400 uppercase tracking-wide">Time on this site</div>
+              <div className="text-2xl font-bold text-white mt-2">8 Months</div>
+            </div>
+            <div className="bg-gradient-to-br from-emerald-500/5 to-green-500/5 border border-emerald-500/12 rounded-xl p-4 text-center">
+              <div className="text-sm text-slate-400 uppercase tracking-wide">Independent Contracting</div>
+              <div className="text-2xl font-bold text-white mt-2">Silverlight Research • 6mo</div>
+            </div>
+          </div>
+
           <div className="relative border-l-2 border-cyan-500/30 pl-8 space-y-12">
             
             {/* Job 1 */}
@@ -123,23 +138,82 @@ const CvPage: React.FC = () => {
             <div className="space-y-4">
               <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-5 hover:border-purple-400/40 transition-all">
                 <h3 className="text-white font-bold flex items-center gap-2">
-                  <span className="text-purple-400"><GraduationCap size={18} /></span>
+                  <span className="text-purple-400">🎓</span>
                   BSc in Computer Science & Engineering
                 </h3>
                 <p className="text-slate-400 text-sm mt-1">Southeast University (Present)</p>
               </div>
               <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-xl p-5 hover:border-blue-400/40 transition-all">
                 <h3 className="text-white font-bold flex items-center gap-2">
-                  <span className="text-blue-400"><BookOpen size={18} /></span>
+                  <span className="text-blue-400">📚</span>
                   Higher Secondary School Certificate (H.S.C)
                 </h3>
               </div>
               <div className="bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 rounded-xl p-5 hover:border-emerald-400/40 transition-all">
                 <h3 className="text-white font-bold flex items-center gap-2">
-                  <span className="text-emerald-400"><Book size={18} /></span>
+                  <span className="text-emerald-400">📖</span>
                   Secondary School Certificate (S.S.C)
                 </h3>
               </div>
+            </div>
+          </section>
+
+          {/* Additional Jobs */}
+          <section className="mb-16">
+            <div className="relative border-l-2 border-cyan-500/30 pl-8 space-y-12">
+
+              {/* 21ideas - Appointment Setter */}
+              <div className="relative">
+                <div className="absolute -left-[41px] top-1 w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 border-4 border-background shadow-lg shadow-cyan-500/50"></div>
+                <div className="bg-gradient-to-br from-blue-500/5 to-cyan-500/5 border border-blue-500/20 rounded-xl p-6">
+                  <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                    <h3 className="text-xl font-bold text-white">Appointment Setter</h3>
+                    <span className="hidden md:block text-slate-600">•</span>
+                    <span className="text-cyan-400 font-medium">21ideas LLC (Remote)</span>
+                  </div>
+                  <p className="text-sm text-slate-500 mb-4 font-mono">10 Months Duration</p>
+                  <ul className="list-disc list-inside space-y-2 text-slate-300 marker:text-cyan-400">
+                    <li>Prospected and qualified leads for scheduled appointments.</li>
+                    <li>Managed CRM entries and daily reporting to team leads.</li>
+                    <li>Trained new hires on calling scripts and objection handling.</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* 21ideas - Sales Closer */}
+              <div className="relative">
+                <div className="absolute -left-[41px] top-1 w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-green-500 border-4 border-background shadow-lg shadow-emerald-500/50"></div>
+                <div className="bg-gradient-to-br from-emerald-500/5 to-green-500/5 border border-emerald-500/20 rounded-xl p-6">
+                  <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                    <h3 className="text-xl font-bold text-white">Sales Closer</h3>
+                    <span className="hidden md:block text-slate-600">•</span>
+                    <span className="text-emerald-400 font-medium">21ideas LLC (Remote)</span>
+                  </div>
+                  <p className="text-sm text-slate-500 mb-4 font-mono">6 Months Duration</p>
+                  <ul className="list-disc list-inside space-y-2 text-slate-300 marker:text-emerald-400">
+                    <li>Closed qualified leads and coordinated next-step handoffs.</li>
+                    <li>Handled discovery calls, pricing conversations and objections.</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* 21ideas - Recruiter & HR */}
+              <div className="relative">
+                <div className="absolute -left-[41px] top-1 w-6 h-6 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 border-4 border-background shadow-lg shadow-purple-500/50"></div>
+                <div className="bg-gradient-to-br from-purple-500/5 to-pink-500/5 border border-purple-500/20 rounded-xl p-6">
+                  <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                    <h3 className="text-xl font-bold text-white">Recruiter & HR</h3>
+                    <span className="hidden md:block text-slate-600">•</span>
+                    <span className="text-purple-400 font-medium">21ideas LLC (Remote)</span>
+                  </div>
+                  <p className="text-sm text-slate-500 mb-4 font-mono">1 Year Duration</p>
+                  <ul className="list-disc list-inside space-y-2 text-slate-300 marker:text-purple-400">
+                    <li>Led full-cycle recruiting and onboarding for sales hires.</li>
+                    <li>Managed candidate screening, assessments and payroll coordination.</li>
+                  </ul>
+                </div>
+              </div>
+
             </div>
           </section>
 
