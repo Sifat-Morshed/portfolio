@@ -8,6 +8,8 @@ const Experience: React.FC = () => {
       company: "PrimePath Home Services",
       location: "Columbus, OH",
       duration: "4 Months",
+      startDate: '2021-11-01',
+      endDate: '2022-02-28',
       description: "Cold-called US homeowners to schedule home inspection assessments.",
       tasks: [
         "Qualified leads based on homeowner interest & property eligibility.",
@@ -20,6 +22,8 @@ const Experience: React.FC = () => {
       company: "BrightLeaf Solar Solutions",
       location: "Walnut Creek, CA",
       duration: "4 Months",
+      startDate: '2021-05-01',
+      endDate: '2021-08-31',
       description: "Outbound calls to homeowners for solar & roof inspection appointments.",
       tasks: [
         "Provided daily reporting to team leader.",
@@ -43,7 +47,9 @@ const Experience: React.FC = () => {
       role: "Appointment Setter",
       company: "21ideas LLC",
       location: "Remote / US Clients",
-      duration: "10 Months",
+      duration: "7 Months",
+      startDate: '2023-06-01',
+      endDate: '2023-12-31',
       description: "B2B appointment setting for IT and AI services at 21ideas LLC — outreach to technical buyers and decision makers.",
       tasks: [
         "Prospected and qualified B2B leads for IT/AI service discussions and demos.",
@@ -55,7 +61,9 @@ const Experience: React.FC = () => {
       role: "Sales Closer",
       company: "21ideas LLC",
       location: "Remote / US Clients",
-      duration: "6 Months",
+      duration: "5 Months",
+      startDate: '2024-01-01',
+      endDate: '2024-05-31',
       description: "B2B sales closer for IT and AI offerings — responsible for discovery, negotiation and closing with technical buyers.",
       tasks: [
         "Conducted technical discovery calls and positioned AI/IT solutions to stakeholders.",
@@ -67,9 +75,9 @@ const Experience: React.FC = () => {
       role: "Recruiter & HR",
       company: "21ideas LLC",
       location: "Remote",
-      duration: "1 Year",
-      startDate: '2023-06-01',
-      endDate: '2024-05-31',
+      duration: "11 Months",
+      startDate: '2024-06-01',
+      endDate: '2026-05-31',
       description: "Recruiter & HR supporting sales and technical hiring for a B2B IT/AI services company.",
       tasks: [
         "Led full-cycle recruiting for sales and entry-level technical roles.",
@@ -82,8 +90,8 @@ const Experience: React.FC = () => {
       company: "Silverlight Research",
       location: "Remote",
       duration: "6 Months",
-      startDate: '2024-02-01',
-      endDate: '2024-07-31',
+      startDate: '2025-11-01',
+      endDate: '2026-05-31',
       description: "B2B contracting for lead research and outreach focused on IT and AI services.",
       tasks: [
         "Researched and verified B2B lead contact details and company eligibility.",
@@ -98,9 +106,9 @@ const Experience: React.FC = () => {
     role: 'Independent Reseller',
     company: 'Apple Device Reselling',
     location: 'Independent / B2B & B2C',
-    duration: '2019 — 2026',
+    duration: 'Ongoing',
     startDate: '2019-03-01',
-    endDate: '2026-04-30',
+    endDate: undefined,
     description: 'Independent reseller of refurbished Apple devices, handling procurement, repairs, and B2B sales to local businesses.',
     tasks: [
       'Sourced and refurbished Apple devices for resale.',
@@ -113,17 +121,23 @@ const Experience: React.FC = () => {
   const summary = experiences.find((e) => e.role === 'Total Experience');
   const list = experiences
     .filter((e) => e.role !== 'Total Experience')
-    // sort by endDate (newest first) when available
+    // sort by startDate (earliest first) for a timeline flow
     .sort((a, b) => {
-      const aEnd = a.endDate ? new Date(a.endDate).getTime() : 0;
-      const bEnd = b.endDate ? new Date(b.endDate).getTime() : 0;
-      return bEnd - aEnd;
+      const aStart = a.startDate ? new Date(a.startDate).getTime() : 0;
+      const bStart = b.startDate ? new Date(b.startDate).getTime() : 0;
+      return aStart - bStart;
     });
 
   const formatDate = (iso?: string) => {
     if (!iso) return '';
     const d = new Date(iso);
     return d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+  };
+
+  const formatDuration = (exp: (typeof experiences)[number]) => {
+    const rangeStart = exp.startDate ? formatDate(exp.startDate) : '';
+    const rangeEnd = exp.endDate ? formatDate(exp.endDate) : 'Present';
+    return rangeStart ? `${exp.duration} • ${rangeStart} — ${rangeEnd}` : exp.duration;
   };
 
   return (
@@ -165,7 +179,7 @@ const Experience: React.FC = () => {
                     <p className="text-primary text-sm font-medium">{exp.role}</p>
                   </div>
                   <span className="bg-white/5 text-slate-400 text-xs font-medium px-2 py-1 rounded h-fit">
-                    {exp.startDate && exp.endDate ? `${formatDate(exp.startDate)} — ${formatDate(exp.endDate)}` : exp.duration}
+                    {formatDuration(exp)}
                   </span>
                 </div>
                 
